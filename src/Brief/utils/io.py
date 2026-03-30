@@ -1,4 +1,5 @@
 import base64
+from pathlib import Path
 
 def check_file_exists(image_path):
     try:
@@ -19,3 +20,23 @@ def read_code_file(file_path):
     with open(file_path, "r", encoding="utf-8") as file:
         code_content = file.read()
     return code_content
+
+def tree_dir(
+        target_dir, 
+        prefix: str = '',
+        exclude_dirs: list[str] = None):
+    "print directory tree"
+    if exclude_dirs is None:
+        # Exclude unused directories
+        exclude_dirs = ['__pycache__', 'venv', '.venv']
+        
+    path = Path(target_dir)
+    contents = sorted([p for p in path.iterdir() if p.name not in exclude_dirs])
+    
+    pointers = ['├── '] * (len(contents) - 1) + ['└── ']
+    for pointer, child in zip(pointers, contents):
+        print(prefix + pointer + child.name)
+        if child.is_dir():
+            extension = '│   ' if pointer == '├── ' else '    '
+            tree_dir(child, prefix + extension, exclude_dirs)
+
