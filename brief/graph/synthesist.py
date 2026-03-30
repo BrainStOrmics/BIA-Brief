@@ -1,0 +1,178 @@
+import logging
+from ..utils import *
+from ..prompts import load_prompt_template
+from ..config import brief_config
+
+from typing import TypedDict, Annotated, Optional, Type, Any
+#langchain
+from langchain_core.language_models import LanguageModelLike
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.output_parsers import JsonOutputParser
+#langgraph
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import Checkpointer
+from langgraph.store.base import BaseStore
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.pregel import RetryPolicy
+#from langgraph.types import interrupt
+#Autogen executors
+from autogen_core import CancellationToken
+from autogen_core.code_executor import CodeBlock
+from autogen_ext.code_executors.docker import DockerCommandLineCodeExecutor
+from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
+
+#----------------
+# Initial logging
+#----------------
+logger = logging.getLogger(__name__)
+
+#----------------
+# Agent orchestration
+#----------------
+def create_synthesist_agent(
+    mmchat_model: LanguageModelLike,
+    *,
+    max_retry = 3,
+    name: Optional[str] = "synthesist_subgraph",
+    config_schema: Optional[Type[Any]] = None,
+    checkpointer: Optional[Checkpointer] = None,
+    store: Optional[BaseStore] = None,
+    interrupt_before: Optional[list[str]] = None,
+    interrupt_after: Optional[list[str]] = None,
+    debug: bool = False,
+    ) -> CompiledStateGraph:
+
+    #----------------
+    # Define graph state
+    #----------------
+
+    class State(TypedDict):
+        #input
+        background: str
+        output_lang: str
+        image_path: str
+        script_path: str
+        
+        #generated
+        caption: str
+        section_summary: str
+
+    #----------------
+    # Define nodes
+    #----------------
+    
+    def node_synthesist(state:State):
+        """
+        """
+        logger.debug("START node_synthesist")
+        logger.info("============Brief============\nStarting synthesist subagent...\n")
+        # Pass inputs
+        background = state['background']
+        output_lang = state['output_lang']
+        image_path = state['image_path']
+        script_path = state['script_path']
+
+        # Check pic file
+        logger.info("Get picture...")
+        if check_image_exists(state):
+            logger.debug("Image file:",image_path," does not exist.")
+            raise FileNotFoundError(f"Image file {image_path} does not exist.")
+        else:
+            pic_64 = image_to_base64(image_path)
+
+        # Check script file
+        logger.info("Get script...")
+        script_content = "The code to generate the following image is as follows:\n"
+        if len(script_path) == 0:
+            logger.info("No script file provided, skip.")
+            script_content = ""
+        else:
+            if check_image_exists(state):
+                script_content += read_code_file(script_path) + '\n'
+            else: 
+                logger.info("Could not find script file in",script_path,", skip.")
+                script_content = ""
+        
+        # Call prompt template
+        prompt, input_vars = load_prompt_template('synthesist')
+        logger.debug(
+            "Using prompt:\n--------prompt--------\n"+
+            str(prompt)+
+            "\n----------------")
+
+        # Parse human input
+        human_input = HumanMessage(
+            content = [
+            {
+                "type": "text",
+                "text": "Write a caption for the following image." + script_content
+            },
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{pic_64}"}
+            },
+        ]
+        )
+
+        # Construct input message
+        message = [
+            SystemMessage(content=prompt.format(
+                background = background,
+                output_lang = output_lang,
+                )),
+            HumanMessage(content=human_input)
+        ]
+
+        # Chose code run env by llm
+        chain = mmchat_model | JsonOutputParser()
+        i = 0
+        while i < max_retry: 
+            try:
+                json_output = chain.invoke(message)
+                # Parse outputs
+                caption = json_output['caption']
+                section_summary = json_output['section_summary']
+                # To log
+                logger.info(
+                    "".join([
+                        "LLM response:\n----------------",
+                        "\ncaption:",caption,
+                        "\nsection_summary:",section_summary
+                        "\n----------------",
+                    ])
+                    )
+                break
+
+            except Exception as e:
+                i+=1
+                if i == max_retry:
+                    logger.exception("Get exception with"+str(i)+"tries:\n")
+                else:
+                    logger.debug("Get exception when parsing env:\n"+str(e))
+        logger.debug("END node_synthesist")
+        return{
+            "caption": caption,
+            "section_summary": section_summary,
+        }
+
+    #----------------
+    # Compile graph
+    #----------------
+
+    # initial builder
+    builder = StateGraph(State, config_schema = config_schema)
+    # add nodes
+    builder.add_node("Synthesist", node_synthesist)
+    # add edges
+    builder.add_edge(START, "Synthesist")
+    builder.add_edge("Synthesist", END)
+    
+    return builder.compile(
+        checkpointer=checkpointer,
+        store=store,
+        interrupt_before=interrupt_before,
+        interrupt_after=interrupt_after,
+        debug=debug,
+        name=name,
+        )
