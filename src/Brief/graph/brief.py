@@ -1,24 +1,21 @@
 import logging
-
 from pathlib import Path
+
 from ..utils import *
-from ..prompts import load_prompt_template
 from ..config import *
 from .synthesist import create_synthesist_agent
 from .thesis import create_thesis_agent  
+from .report import create_report_agent
 
 import operator
-from typing import TypedDict, Optional, Type, Any, Annotated, Literal
+from typing import TypedDict, Optional, Type, Any, Annotated
 #langchain
 from langchain_core.language_models import LanguageModelLike
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.output_parsers import JsonOutputParser
 #langgraph
-from langgraph.graph import StateGraph, START, END, Send
+from langgraph.graph import StateGraph, START, END
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Checkpointer
 from langgraph.store.base import BaseStore
-from langgraph.pregel import RetryPolicy
 
 #----------------
 # Initial logging
@@ -53,6 +50,7 @@ def create_brief_agent(
         background: str
         output_lang: str
         report_template: str
+        template_fields: dict[str, Any]
 
         #parameters
         # n_iter: int
@@ -60,11 +58,14 @@ def create_brief_agent(
         #generated
         pic_abs_dirs: list[str]
         script_abs_dir: str
-        captions: Annotated[dict, operator.add]
-        session_summaries: Annotated[dict, operator.add]
+        captions: Annotated[list[dict[str, str]], operator.add]
+        section_summaries: Annotated[list[dict[str, str]], operator.add]
         conclusion: str
         discussion: str
         key_takeaways: list[str]
+        report_md: str
+        report_dict: dict[str, Any]
+        
 
     #----------------
     # Load subgraphs
@@ -73,7 +74,7 @@ def create_brief_agent(
     # Get crawler subgraph 
     logger.debug("Loading synthesist subgraph.")
     synthesist_agent = create_synthesist_agent(
-        mmchat_model = chat_model, 
+        mmchat_model = mmchat_model,
         max_retry = max_retry,
         name =  "synthesist_subgraph",
         config_schema = config_schema,
@@ -96,6 +97,19 @@ def create_brief_agent(
         interrupt_after = interrupt_after,
         debug = debug,
         )
+
+    logger.debug("Loading report subgraph.")
+    report_agent = create_report_agent(
+        chat_model = chat_model,
+        max_retry = max_retry,
+        name = "report_subgraph",
+        config_schema = config_schema,
+        checkpointer = checkpointer,
+        store = store,
+        interrupt_before = interrupt_before,
+        interrupt_after = interrupt_after,
+        debug = debug,
+    )
     
     #----------------
     # Define nodes
@@ -109,15 +123,12 @@ def create_brief_agent(
         project_id = state['project_id']
         project_path = state['project_path']
         background = state['background']
-
-        # Orgnize project files
-        file_tree = tree_dir(project_path)
-        abs_path = Path(project_path).absolute()
         
         # Get all pic and script paths with LLM
-        #
-        # Not yet finish
-        #
+        filemanager_state = discover_project_files(project_path)
+        pic_abs_dirs = filemanager_state["pic_abs_dirs"]
+        script_abs_dir = filemanager_state["script_abs_dir"]
+        logger.debug("END node_filemanager")
 
         
         return{
@@ -125,50 +136,56 @@ def create_brief_agent(
             "script_abs_dir": script_abs_dir,
         }
 
-    async def node_summary_section(state:State):
+    def node_summary_section(state:State):
         # Pass inputs
         background = state['background']
-        pic_abs_dir = state['pic_abs_dirs']
+        pic_abs_dirs = state['pic_abs_dirs']
         script_abs_dir = state['script_abs_dir']
         output_lang = state['output_lang']
 
-        # Parse subgraph inputs
-        synthesist_input = {
-            "background": background,
-            "output_lang": output_lang,
-            "image_path": pic_abs_dir,
-            "script_abs_dir": script_abs_dir,
-            }
-        
-        # Get section summary with synthesist subgraph
-        logger.info("Invoking synthesist subgraph...")
-        try:
-            synthesist_state = await synthesist_agent.ainvoke(
-                synthesist_input,
-                config = config_schema)
-            # Pass output
-            caption = synthesist_state['caption']
-            section_summary = synthesist_state['section_summary']
-            logger.info("Successfully retrieved section summary with synthesist subgraph.")
-            logger.debug(f"Section summary found: {section_summary}")
-        except Exception as e:
-            logger.exception("Error dealing with file system.")
-            raise  
+        caption_items = []
+        section_summary_items = []
 
-        # Parse subgraph output
-        caption_dict = {
-            "pic_path": pic_abs_dir
-            "caption": caption,
-        }
-        section_summar_dict = {
-            "pic_path": pic_abs_dir
-            "section_summary": section_summary,
-        }
+        for index, pic_abs_dir in enumerate(pic_abs_dirs, start=1):
+            figure_id = f"Figure {index}"
+
+            synthesist_input = {
+                "background": background,
+                "output_lang": output_lang,
+                "figure_id": figure_id,
+                "image_path": pic_abs_dir,
+                "script_path": script_abs_dir,
+            }
+
+            logger.info("Invoking synthesist subgraph for: %s", pic_abs_dir)
+            try:
+                synthesist_state = synthesist_agent.invoke(
+                    synthesist_input,
+                    config=config_schema,
+                )
+                caption_title = synthesist_state.get('caption_title', '')
+                caption_body = synthesist_state.get('caption_body', '')
+                caption = synthesist_state['caption']
+                section_summary = synthesist_state['section_summary']
+            except Exception:
+                logger.exception("Error invoking synthesist subgraph for image: %s", pic_abs_dir)
+                raise
+
+            caption_items.append({
+                "image_path": pic_abs_dir,
+                "caption_title": caption_title,
+                "caption_body": caption_body,
+                "caption": caption,
+            })
+            section_summary_items.append({
+                "image_path": pic_abs_dir,
+                "section_summary": section_summary,
+            })
 
         logger.debug("END node_summary_section")
         return {
-            "captions": caption_dict,
-            "session_summaries": section_summar_dict,
+            "captions": caption_items,
+            "section_summaries": section_summary_items,
         }
 
     def node_generate_thesis(state:State):
@@ -176,19 +193,24 @@ def create_brief_agent(
         # Pass inputs
         background = state['background']
         output_lang = state['output_lang']
-        session_summaries = state['session_summaries']
-        pic_abs_dir = state['pic_abs_dirs']
+        section_summaries = state['section_summaries']
+        pic_abs_dirs = state['pic_abs_dirs']
 
-        # Orgnize session summary sequence by pic path
-        session_summaries_list = []
-        for pic_path in pic_abs_dir:
-            session_summaries_list.append(session_summaries[pic_path])
+        summary_map = {
+            item.get("image_path", ""): item.get("section_summary", "")
+            for item in section_summaries
+        }
+
+        # Organize section summary sequence by pic path
+        section_summaries_list = []
+        for pic_path in pic_abs_dirs:
+            section_summaries_list.append(summary_map.get(pic_path, ""))
 
         # Parse subgraph inputs
         thesis_input = {
             "background": background,
             "output_lang": output_lang,
-            "session_summaries": session_summaries_list,
+            "section_summaries": section_summaries_list,
         }
 
         # Call thesis subgraph
@@ -210,33 +232,63 @@ def create_brief_agent(
         }
 
     def node_generate_report(state:State):
-        """
-        load template and produce pdf
-        """
-        # Pass inputs
+        project_id = state['project_id']
+        project_path = state['project_path']
+        background = state['background']
+        output_lang = state['output_lang']
         report_template = state['report_template']
+        pic_abs_dirs = state['pic_abs_dirs']
+        captions = state['captions']
+        section_summaries = state['section_summaries']
         conclusion = state['conclusion']
         discussion = state['discussion']
         key_takeaways = state['key_takeaways']
 
-        # Open report template
-        #
-        # Not yet finish
-        # 
+        report_state = report_agent.invoke(
+            {
+                "project_id": project_id,
+                "project_path": project_path,
+                "background": background,
+                "output_lang": output_lang,
+                "report_template": report_template,
+                "pic_abs_dirs": pic_abs_dirs,
+                "captions": captions,
+                "section_summaries": section_summaries,
+                "conclusion": conclusion,
+                "discussion": discussion,
+                "key_takeaways": key_takeaways,
+            },
+            config=config_schema,
+        )
 
-        # Parse report 
-        #
-        # Not yet finish
-        #
+        report_md = report_state.get("report_md", "")
+        if not report_md:
+            raise ValueError("Report agent did not return report_md.")
 
-        # Output report.pdf
-        #
-        # Not yet finish
-        #
+        report_output_path = Path(project_path).expanduser().resolve() / "local_tests" / "output" / "auto_report.md"
+        report_output_path.parent.mkdir(parents=True, exist_ok=True)
+        report_output_path.write_text(report_md, encoding="utf-8")
 
+        report_dict = {
+            "project_id": project_id,
+            "project_path": project_path,
+            "output_lang": output_lang,
+            "report_template": report_template,
+            "report_output_path": str(report_output_path),
+            "report_md": report_md,
+            "report_state": report_state,
+            "captions": captions,
+            "section_summaries": section_summaries,
+            "discussion": discussion,
+            "conclusion": conclusion,
+            "key_takeaways": key_takeaways,
+        }
+
+        logger.info("Saved markdown report to: %s", report_output_path)
 
         return {
-            # Not yet finish
+            "report_md": report_md,
+            "report_dict": report_dict,
         }
 
     # def node_refine(state:State):
@@ -294,25 +346,10 @@ def create_brief_agent(
 
 
     #----------------
-    # Define conditional edges
-    #----------------
-    def map_to_synthesist(state:State):
-        return [
-            Send(
-                "Summary sections",
-                {
-                    "pic_abs_dirs": p,
-                    "background": state['background'],
-                    "script_abs_dir": state['script_abs_dir'],
-                    "output_lang": state['output_lang']
-                }) for p in state["pic_abs_dirs"] 
-        ]
-        
-    #----------------
     # Compile graph
     #----------------
     logger.info("Compiling Ghostcoder agent graph...")
-
+    
     # initial builder
     builder = StateGraph(State, config_schema = config_schema)
     # add nodes
@@ -323,11 +360,7 @@ def create_brief_agent(
     #builder.add_node("Refine",node_refine)
     # add edges
     builder.add_edge(START, "File manager")
-    builder.add_conditional_edges(
-        "File manager", 
-        map_to_synthesist,
-        ["Summary sections"]
-    )
+    builder.add_edge("File manager", "Summary sections")
     builder.add_edge("Summary sections","Generate thesis")
     builder.add_edge("Generate thesis","Generate report")
     builder.add_edge("Generate report", END)

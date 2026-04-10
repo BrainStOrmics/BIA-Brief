@@ -13,7 +13,6 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Checkpointer
 from langgraph.store.base import BaseStore
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.pregel import RetryPolicy
 
 
 #----------------
@@ -45,10 +44,13 @@ def create_synthesist_agent(
         #input
         background: str
         output_lang: str
+        figure_id: str
         image_path: str
         script_path: str
         
         #generated
+        caption_title: str
+        caption_body: str
         caption: str
         section_summary: str
 
@@ -64,16 +66,17 @@ def create_synthesist_agent(
         # Pass inputs
         background = state['background']
         output_lang = state['output_lang']
+        figure_id = state['figure_id']
         image_path = state['image_path']
         script_path = state['script_path']
 
         # Check pic file
         logger.info("Get picture...")
-        if check_image_exists(state):
-            logger.debug("Image file:",image_path," does not exist.")
+        if not check_image_exists(image_path):
+            logger.debug("Image file: %s does not exist.", image_path)
             raise FileNotFoundError(f"Image file {image_path} does not exist.")
         else:
-            pic_64 = image_to_base64(image_path)
+            pic_64, pic_mime_type = image_to_base64_for_llm(image_path)
 
         # Check script file
         logger.info("Get script...")
@@ -82,7 +85,7 @@ def create_synthesist_agent(
             logger.info("No script file provided, skip.")
             script_content = ""
         else:
-            if check_image_exists(state):
+            if check_file_exists(script_path):
                 script_content += read_code_file(script_path) + '\n'
             else: 
                 logger.info("Could not find script file in",script_path,", skip.")
@@ -100,11 +103,15 @@ def create_synthesist_agent(
             content = [
             {
                 "type": "text",
-                "text": "Write a caption for the following image." + script_content
+                "text": (
+                    "Write a figure title and a separate figure explanation for the following image. "
+                    f"Use the exact figure identifier '{figure_id}' as the title numbering. "
+                    + script_content
+                )
             },
             {
                 "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{pic_64}"}
+                "image_url": {"url": f"data:{pic_mime_type};base64,{pic_64}"}
             },
         ]
         )
@@ -114,8 +121,9 @@ def create_synthesist_agent(
             SystemMessage(content=prompt.format(
                 background = background,
                 output_lang = output_lang,
+                figure_id = figure_id,
                 )),
-            HumanMessage(content=human_input)
+            human_input
         ]
 
         # Chose code run env by llm
@@ -125,12 +133,19 @@ def create_synthesist_agent(
             try:
                 json_output = chain.invoke(message)
                 # Parse outputs
+                caption_title = json_output.get('caption_title', '')
+                caption_body = json_output.get('caption_body', '')
                 caption = json_output['caption']
                 section_summary = json_output['section_summary']
+                if not caption:
+                    caption_parts = [part for part in [caption_title, caption_body] if part]
+                    caption = " ".join(caption_parts)
                 # To log
                 logger.info(
                     "".join([
                         "LLM response:\n----------------",
+                        "\ncaption_title:", caption_title,
+                        "\ncaption_body:", caption_body,
                         "\ncaption:",caption,
                         "\nsection_summary:",section_summary,
                         "\n----------------",
@@ -142,10 +157,13 @@ def create_synthesist_agent(
                 i+=1
                 if i == max_retry:
                     logger.exception("Get exception with"+str(i)+"tries:\n")
+                    raise
                 else:
                     logger.debug("Get exception when parsing env:\n"+str(e))
         logger.debug("END node_synthesist")
         return{
+            "caption_title": caption_title,
+            "caption_body": caption_body,
             "caption": caption,
             "section_summary": section_summary,
         }

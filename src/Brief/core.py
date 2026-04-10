@@ -11,7 +11,11 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 #from langgraph.types import interrupt
 #plot graph
-from IPython.display import Image, display
+try:
+    from IPython.display import Image, display
+except Exception:  # pragma: no cover
+    Image = None
+    display = None
 from langgraph.types import Checkpointer
 
 class Brief:
@@ -54,7 +58,7 @@ class Brief:
         try:
             self.graph = create_brief_agent(
                 chat_model = self.chat_model,
-                code_model = self.mmchat_model,
+                mmchat_model= self.mmchat_model,
                 max_retry = self.max_try,
                 name = self.name,
                 config_schema = self.config_schema,
@@ -80,11 +84,12 @@ class Brief:
         # Pass parameters
         self.task = task
         self.project_id = project_id
-        beief.config.PRPJECT_ID = self.project_id
+        brief_config.PROJECT_ID = self.project_id
         self.project_path = input_wrap['project_path']
         self.background = input_wrap['background']
         self.output_lang = input_wrap['output_lang']
         self.report_template = input_wrap['report_template']
+        self.template_fields = input_wrap.get('template_fields', {})
 
         # Pass agent input
         agent_input = {
@@ -93,6 +98,7 @@ class Brief:
             "background": self.background,
             "output_lang": self.output_lang,
             "report_template": self.report_template,
+            "template_fields": self.template_fields,
             }
         
         # Run agent
@@ -105,6 +111,10 @@ class Brief:
         return report_md, report_dict
     
     def draw_graph(self):
+        if Image is None or display is None:
+            print("IPython is not installed; draw_graph is unavailable in this environment.")
+            return
+
         i = 0 
         while i < self.max_try:
             try:

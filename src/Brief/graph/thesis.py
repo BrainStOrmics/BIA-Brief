@@ -14,13 +14,9 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Checkpointer
 from langgraph.store.base import BaseStore
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.pregel import RetryPolicy
 #from langgraph.types import interrupt
 #Autogen executors
-from autogen_core import CancellationToken
-from autogen_core.code_executor import CodeBlock
-from autogen_ext.code_executors.docker import DockerCommandLineCodeExecutor
-from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
+
 
 #----------------
 # Initial logging
@@ -70,7 +66,7 @@ def create_thesis_agent(
         # Pass inputs
         background = state['background']
         output_lang = state['output_lang']
-        section_summary_list = state['image_path']
+        section_summary_list = state['section_summaries']
 
         # Re-format sections
         section_summary = "\n###Section summaries for this research/project:\n========\n"
