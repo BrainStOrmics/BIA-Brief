@@ -130,8 +130,15 @@ def build_html_document(
     background_image_uri: str,
     title: str = "自动化报告",
     base_href: str | None = None,
+    for_cover: bool = False,
 ) -> str:
     base_tag = f'    <base href="{html.escape(base_href)}" />\n' if base_href else ""
+    if for_cover:
+        return _build_cover_html_document(body_html, background_image_uri, title, base_tag)
+    return _build_body_html_document(body_html, background_image_uri, title, base_tag)
+
+
+def _build_cover_html_document(body_html: str, background_image_uri: str, title: str, base_tag: str) -> str:
     return f"""<!doctype html>
 <html lang=\"zh-CN\">
 <head>
@@ -168,30 +175,103 @@ def build_html_document(
             z-index: 0;
             pointer-events: none;
         }}
-        .layout-table {{
-            width: 100%;
-            border: none;
-            border-collapse: collapse;
+        .cover-wrapper {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: {A4_HEIGHT_MM}mm;
+            box-sizing: border-box;
+            padding: 20mm 16mm 18mm;
             position: relative;
             z-index: 2;
-            background: transparent;
+            overflow: hidden;
+        }}
+        .cover-wrapper h2 {{
+            font-size: 26pt;
+            font-weight: bold;
+            margin: 0 0 10mm 0;
+            color: #222;
+            text-align: center;
+        }}
+        .cover-wrapper h2:last-of-type {{
+            margin-bottom: 14mm;
+        }}
+        .cover-wrapper img {{
+            max-height: 130mm;
+            max-width: 100%;
+            object-fit: contain;
+            display: block;
+        }}
+        .cover-wrapper p {{
+            position: absolute;
+            bottom: 12mm;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 10pt;
+            color: gray;
             margin: 0;
         }}
-        .layout-table th, .layout-table td {{
-            border: none;
-            padding: 0;
-            background: transparent;
+    </style>
+</head>
+<body>
+    <div class=\"page-bg\"></div>
+    {body_html}
+</body>
+</html>
+"""
+
+
+def _build_body_html_document(body_html: str, background_image_uri: str, title: str, base_tag: str) -> str:
+    return f"""<!doctype html>
+<html lang=\"zh-CN\">
+<head>
+    <meta charset=\"utf-8\" />
+    <title>{html.escape(title)}</title>
+{base_tag}    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+    <style>
+        @page {{
+            size: A4;
+            margin: 0 0 {BOTTOM_MARGIN_MM}mm 0;
         }}
-        .header-space {{
-            height: 14mm;
+        html, body {{
+            width: 100%;
+            height: 100%;
         }}
-        .footer-space {{
-            height: {FOOTER_SAFE_SPACE_MM}mm;
+        body {{
+            font-family: "Arial", "Microsoft YaHei", "PingFang SC", "SimSun", sans-serif;
+            font-size: 15pt;
+            line-height: 1.7;
+            color: #222;
+            margin: 0;
         }}
         .content {{
             width: 100%;
             box-sizing: border-box;
-            padding: 0 16mm 16mm;
+            padding: 14mm 16mm 16mm;
+        }}
+        .ref-title {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0 8px 0;
+            font-family: Arial, "SimSun", "Songti SC", serif;
+            font-size: 16pt;
+            font-weight: 700;
+            color: #0d63b8;
+            line-height: 1;
+            page-break-before: always;
+        }}
+        .ref-title .ref-dot {{
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #0d63b8;
+            flex: 0 0 18px;
+        }}
+        .ref-title .ref-text {{
+            letter-spacing: 0.5px;
         }}
         .cover-wrapper {{
             text-align: center;
@@ -234,6 +314,16 @@ def build_html_document(
         }}
         .toc-item {{
             white-space: nowrap;
+        }}
+        .toc-level-0 .toc-item {{
+            padding-left: 0;
+            font-weight: 700;
+        }}
+        .toc-level-1 .toc-item {{
+            padding-left: 24px;
+        }}
+        .toc-level-2 .toc-item {{
+            padding-left: 48px;
         }}
         .toc-dots {{
             flex: 1;
@@ -289,36 +379,25 @@ def build_html_document(
             color: #1f2d3d;
             margin-top: 0.9em;
             margin-bottom: 0.5em;
+            page-break-after: avoid;
         }}
         img {{
             max-width: 100%;
             height: auto;
             display: block;
             margin: 8px auto;
+            page-break-inside: avoid;
         }}
         p {{
             margin: 0.45em 0;
         }}
+        .content p, .content table {{
+            page-break-inside: avoid;
+        }}
     </style>
 </head>
 <body>
-    <div class=\"page-bg\"></div>
-
-    <table class=\"layout-table\">
-        <thead>
-            <tr><td><div class=\"header-space\"></div></td></tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>
-                    <main class=\"content\">{body_html}</main>
-                </td>
-            </tr>
-        </tbody>
-        <tfoot>
-            <tr><td><div class=\"footer-space\"></div></td></tr>
-        </tfoot>
-    </table>
+    <main class=\"content\">{body_html}</main>
 </body>
 </html>
 """
@@ -380,6 +459,12 @@ def replace_toc_page_numbers(body_html: str, page_numbers: list[int]) -> str:
     return toc_page_pattern.sub(repl, body_html)
 
 
+def _normalize_cjk_compat(text: str) -> str:
+    """Normalize CJK compatibility characters to their standard equivalents using NFKC."""
+    import unicodedata
+    return unicodedata.normalize("NFKC", text)
+
+
 def collect_heading_pages_from_pdf(pdf_path: Path, heading_texts: list[str]) -> list[int]:
     if PdfReader is None:
         raise RuntimeError(INSTALL_PYPDF_HINT)
@@ -387,30 +472,58 @@ def collect_heading_pages_from_pdf(pdf_path: Path, heading_texts: list[str]) -> 
     reader = PdfReader(str(pdf_path))
     pages_text: list[str] = []
     toc_last_page_index = -1
+    TOC_MARKERS = ("目录", "⽬录")
 
     for page in reader.pages:
         text = page.extract_text() or ""
         normalized = re.sub(r"\s+", "", text)
         pages_text.append(normalized)
-        if normalized.startswith("目录"):
-            toc_last_page_index = len(pages_text) - 1
+        for marker in TOC_MARKERS:
+            if marker in normalized[:30]:
+                toc_last_page_index = len(pages_text) - 1
+                break
+
+    if toc_last_page_index == -1:
+        for i, text in enumerate(pages_text):
+            for marker in TOC_MARKERS:
+                if marker in text[:60]:
+                    toc_last_page_index = i
+                    break
+            if toc_last_page_index >= 0:
+                break
 
     page_numbers: list[int] = []
     search_start_page = max(1, toc_last_page_index + 2)
 
     for heading in heading_texts:
-        heading_normalized = re.sub(r"\s+", "", heading)
+        heading_normalized = _normalize_cjk_compat(re.sub(r"\s+", "", heading))
         if not heading_normalized:
             continue
 
         page_number = None
         for page_index in range(search_start_page - 1, len(pages_text)):
-            if heading_normalized in pages_text[page_index]:
+            page_text = _normalize_cjk_compat(pages_text[page_index])
+            search_zone = page_text[:max(200, len(page_text) // 4)]
+            if heading_normalized in search_zone:
                 page_number = page_index + 1
                 break
 
         if page_number is None:
-            page_number = search_start_page
+            for page_index in range(search_start_page - 1, len(pages_text)):
+                page_text = _normalize_cjk_compat(pages_text[page_index])
+                if heading_normalized in page_text:
+                    page_number = page_index + 1
+                    break
+
+        if page_number is None and search_start_page > 1:
+            prev_page = search_start_page - 1
+            if prev_page - 1 < len(pages_text):
+                prev_text = _normalize_cjk_compat(pages_text[prev_page - 1])
+                if heading_normalized in prev_text:
+                    page_number = prev_page
+
+        if page_number is None:
+            page_number = search_start_page + 1
 
         page_numbers.append(page_number)
         search_start_page = page_number
@@ -448,17 +561,75 @@ def _render_html_to_pdf(html_path: Path, output_pdf: Path, show_page_numbers: bo
         browser.close()
 
 
-def _merge_pdfs(cover_pdf: Path, body_pdf: Path, merged_pdf: Path) -> None:
+def _create_background_pdf(bg_image_uri: str, output_path: Path) -> None:
+    """Render a single-page A4 PDF with only the background image."""
+    html = f"""<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8" />
+<style>
+@page {{ size: A4; margin: 0; }}
+html, body {{ margin: 0; padding: 0; width: 100%; height: 100%; }}
+body {{
+    background-image: url('{bg_image_uri}');
+    background-size: 100% 100%;
+    background-position: right bottom;
+    background-repeat: no-repeat;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}}
+</style>
+</head>
+<body></body>
+</html>"""
+    tmp_html = output_path.with_suffix(".html")
+    try:
+        tmp_html.write_text(html, encoding="utf-8")
+        with sync_playwright() as p:
+            browser = _launch_chromium_browser(p)
+            page = browser.new_page(viewport={"width": 794, "height": 1122}, device_scale_factor=1)
+            page.goto(tmp_html.as_uri(), wait_until="networkidle")
+            page.emulate_media(media="print")
+            page.pdf(
+                path=str(output_path),
+                format="A4",
+                print_background=True,
+                margin={"top": "0mm", "right": "0mm", "bottom": "0mm", "left": "0mm"},
+            )
+            browser.close()
+    finally:
+        if tmp_html.exists():
+            tmp_html.unlink()
+
+
+def _add_background_to_pdf(body_pdf: Path, background_pdf: Path) -> None:
+    """Overlay background image under each page of body_pdf."""
+    if PdfReader is None or PdfWriter is None:
+        raise RuntimeError(INSTALL_PYPDF_HINT)
+
+    bg_reader = PdfReader(str(background_pdf))
+    bg_page = bg_reader.pages[0]
+
+    body_reader = PdfReader(str(body_pdf))
+    writer = PdfWriter()
+    for pdf_page in body_reader.pages:
+        pdf_page.merge_page(bg_page, over=False)
+        writer.add_page(pdf_page)
+
+    with body_pdf.open("wb") as f:
+        writer.write(f)
+
+
+def _merge_pdfs(source_pdfs: list[Path], output_pdf: Path) -> None:
     if PdfReader is None or PdfWriter is None:
         raise RuntimeError(INSTALL_PYPDF_HINT)
 
     writer = PdfWriter()
-    for src in (cover_pdf, body_pdf):
+    for src in source_pdfs:
         reader = PdfReader(str(src))
         for page in reader.pages:
             writer.add_page(page)
 
-    with merged_pdf.open("wb") as f:
+    with output_pdf.open("wb") as f:
         writer.write(f)
 
 
@@ -468,6 +639,27 @@ def _get_pdf_page_count(pdf_path: Path) -> int:
 
     reader = PdfReader(str(pdf_path))
     return len(reader.pages)
+
+
+def _split_toc_and_content(body_html: str) -> tuple[str, str]:
+    """Split body HTML into TOC section and content section.
+
+    Returns (toc_html, content_html). If no TOC block is found,
+    returns ('', body_html).
+    """
+    if 'class="toc-block"' not in body_html and "class='toc-block'" not in body_html:
+        return "", body_html
+
+    match = re.search(
+        r'(<div\s+style=[\'"]page-break-after:\s*always;?[\'"]\s*></div>)',
+        body_html,
+    )
+    if match:
+        toc_section = body_html[:match.end()].strip()
+        content_section = body_html[match.end():].strip()
+        return toc_section, content_section
+
+    return "", body_html
 
 
 def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
@@ -491,14 +683,19 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
             raise FileNotFoundError(f"背景图片不存在: {background_image_path}")
 
     body_html = convert(body_md)
+    toc_body_html, content_body_html = _split_toc_and_content(body_html)
 
     temp_html = output_pdf.parent / f"_{output_pdf.stem}_body_temp.html"
-    body_pdf = output_pdf.parent / f"_{output_pdf.stem}_body.pdf"
+    content_pdf = output_pdf.parent / f"_{output_pdf.stem}_content.pdf"
+    toc_pdf = output_pdf.parent / f"_{output_pdf.stem}_toc.pdf"
     cover_pdf = output_pdf.parent / f"_{output_pdf.stem}_cover.pdf"
     measure_pdf = output_pdf.parent / f"_{output_pdf.stem}_measure.pdf"
-    cover_page_offset = 0
+    bg_pdf = output_pdf.parent / f"_{output_pdf.stem}_bg.pdf"
 
     try:
+        # Render background watermark PDF (single A4 page with just the bg image)
+        _create_background_pdf(background_image_path.as_uri(), bg_pdf)
+
         if cover_md:
             cover_html = convert(cover_md)
             cover_html_doc = build_html_document(
@@ -506,6 +703,7 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
                 background_image_path.as_uri(),
                 title=md_path.stem,
                 base_href=base_href,
+                for_cover=True,
             )
             temp_cover_html = output_pdf.parent / f"_{output_pdf.stem}_cover_temp.html"
             try:
@@ -515,26 +713,43 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
                 if temp_cover_html.exists():
                     temp_cover_html.unlink()
 
-            cover_page_offset = _get_pdf_page_count(cover_pdf)
-
-        temp_html.write_text(
-            build_html_document(
-                body_html,
+        if toc_body_html:
+            # Measure heading positions from content-only rendering
+            content_full_html = build_html_document(
+                content_body_html,
                 background_image_path.as_uri(),
                 title=md_path.stem,
                 base_href=base_href,
-            ),
-            encoding="utf-8",
-        )
+            )
+            temp_html.write_text(content_full_html, encoding="utf-8")
 
-        heading_data = collect_heading_pages(temp_html)
-        heading_texts = [str(item["text"]) for item in heading_data]
+            heading_data = collect_heading_pages(temp_html)
+            heading_texts = [str(item["text"]) for item in heading_data]
 
-        _render_html_to_pdf(temp_html, measure_pdf, show_page_numbers=True)
-        toc_pages = [page + cover_page_offset for page in collect_heading_pages_from_pdf(measure_pdf, heading_texts)]
+            _render_html_to_pdf(temp_html, measure_pdf, show_page_numbers=True)
+            # Page numbers from content-only PDF = content page numbers (no offset needed)
+            toc_page_numbers = collect_heading_pages_from_pdf(measure_pdf, heading_texts)
 
-        if toc_pages:
-            body_html = replace_toc_page_numbers(body_html, toc_pages)
+            if toc_page_numbers:
+                toc_body_html = replace_toc_page_numbers(toc_body_html, toc_page_numbers)
+
+            # Render TOC PDF (no footer page numbers)
+            toc_full_html = build_html_document(
+                toc_body_html,
+                background_image_path.as_uri(),
+                title=md_path.stem,
+                base_href=base_href,
+            )
+            temp_html.write_text(toc_full_html, encoding="utf-8")
+            _render_html_to_pdf(temp_html, toc_pdf, show_page_numbers=False)
+            _add_background_to_pdf(toc_pdf, bg_pdf)
+
+            # Render content PDF (with footer page numbers, starting at 1)
+            temp_html.write_text(content_full_html, encoding="utf-8")
+            _render_html_to_pdf(temp_html, content_pdf, show_page_numbers=True)
+            _add_background_to_pdf(content_pdf, bg_pdf)
+        else:
+            # No TOC — render entire body as one PDF with page numbers
             temp_html.write_text(
                 build_html_document(
                     body_html,
@@ -544,14 +759,18 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
                 ),
                 encoding="utf-8",
             )
+            _render_html_to_pdf(temp_html, content_pdf, show_page_numbers=True)
+            _add_background_to_pdf(content_pdf, bg_pdf)
 
-        if cover_md:
-            _render_html_to_pdf(temp_html, body_pdf, show_page_numbers=True)
-            _merge_pdfs(cover_pdf, body_pdf, output_pdf)
+        # Merge in order: cover + TOC + content
+        source_pdfs = [src for src in (cover_pdf, toc_pdf, content_pdf) if src.exists()]
+        if len(source_pdfs) == 1:
+            source_pdfs[0].rename(output_pdf)
         else:
-            _render_html_to_pdf(temp_html, output_pdf, show_page_numbers=True)
+            _merge_pdfs(source_pdfs, output_pdf)
+
     finally:
-        for temp_file in (temp_html, body_pdf, cover_pdf, measure_pdf):
+        for temp_file in (temp_html, content_pdf, toc_pdf, cover_pdf, measure_pdf, bg_pdf):
             if temp_file.exists():
                 temp_file.unlink()
 

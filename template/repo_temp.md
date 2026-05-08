@@ -1,5 +1,5 @@
 <div class='cover-wrapper'>
-<h2 style="font-size: 15pt;">{{Cover_Contract_ID}}</h2>
+
 <div style='text-align: center;'>
 
 <h2>{{Cover_Report_Title}}</h2>
@@ -193,66 +193,8 @@ table.report-table td,
 .textbox-block pre {
     font-size: 9pt;
 }
-
-.toc-block {
-    margin: 0 0 12px 0;
-}
-
-.toc-title {
-    margin: 0 0 8px 0;
-    font-size: 14pt;
-    font-weight: 700;
-    color: #0d63b8;
-}
-
-.toc-line {
-    display: flex;
-    align-items: baseline;
-    gap: 0;
-    margin: 0;
-    line-height: 1.45;
-}
-
-.toc-item {
-    flex: 0 1 auto;
-    min-width: 0;
-    white-space: normal;
-}
-
-.toc-level-0 .toc-item {
-    padding-left: 0;
-}
-
-.toc-level-1 .toc-item {
-    padding-left: 18px;
-}
-
-.toc-level-2 .toc-item {
-    padding-left: 36px;
-}
-
-.toc-dots {
-    flex: 1 1 auto;
-    min-width: 10px;
-    margin: 0 8px 3px 8px;
-    border-bottom: 1px dashed #bdbdbd;
-    opacity: 0.95;
-}
-
-.toc-page {
-    flex: 0 0 auto;
-    min-width: 1.5em;
-    text-align: right;
-}
 </style>
 
 
 <!-- __BODY_START__ -->
-{{Toc_Block}}
-<div style='page-break-after: always;'></div>
-
 {{Body_Content}}
-
-<div class='ref-title'><span class='ref-dot' aria-hidden='true'></span><span class='ref-text'>参考文献</span></div>
-
-{{References_Block}}

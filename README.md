@@ -1,75 +1,107 @@
 # BIA-Brief
 
-Multi-modal report generation prototype for bioinformatics projects. BIA-Brief uses LangGraph to orchestrate a workflow that combines figures, analysis scripts, and background context to produce publication-style captions, section summaries, discussions, and conclusions in English or Chinese.
+Multi-agent bioinformatics report generation system. BIA-Brief orchestrates a LangGraph workflow that takes figures, analysis scripts, and research background, then produces a professional-grade Markdown report (with optional PDF export) in English or Chinese.
 
-The project is currently optimized for single-cell and single-nucleus transcriptomics workflows, where a project folder already contains figures and supporting scripts that need to be turned into structured report text.
+The system is optimized for single-cell / single-nucleus transcriptomics projects, but can adapt to any bioinformatics domain where figures and analysis context are available.
 
-## Highlights
+## Architecture
 
-- Automatically discovers images under `pics/` and optional scripts under `scripts/`.
-- Uses a multimodal model to generate figure captions and section summaries.
-- Uses a text model to synthesize multiple section summaries into discussion and conclusion sections.
-- Includes Markdown-to-PDF utilities for final report formatting.
-- Supports custom model configuration, output language, and report templates.
+The report generation pipeline consists of four sequential nodes in a LangGraph state graph:
+
+```text
+File manager → Summary sections → Generate thesis → Generate report
+```
+
+| Node | Model | Responsibility |
+|------|-------|----------------|
+| **File manager** | — (file system) | Discovers images under `pics/` and optional scripts under `scripts/` |
+| **Summary sections** | Multimodal (vision) | Processes each image in parallel — generates figure captions (title + body) and section summaries |
+| **Generate thesis** | Text (reasoning) | Synthesizes all section summaries into a coherent discussion, conclusion, and key takeaways |
+| **Generate report** | Text (reasoning) | Assembles the full report from all inputs — writes structured body content, table of contents, and references |
+
+## Features
+
+- **Parallel image processing** — all figures analyzed concurrently via `ThreadPoolExecutor`
+- **Figure embedding with renumbering** — figures placed near relevant analysis text and auto-renumbered
+- **Discussion + Conclusion synthesis** — higher-level narrative generated from individual section summaries
+- **Bilingual output** — Chinese and English with formal academic tone
+- **Template-driven rendering** — `{{placeholder}}` substitution against customizable templates
+- **Automatic PDF export** — PDF generated alongside Markdown
 
 ## Project Layout
 
 ```text
 src/Brief/
-  core.py            # Main entry point and Brief class
-  config/            # Model and runtime configuration
-  graph/             # LangGraph workflows and subgraphs
-  prompts/           # Prompt templates
-  utils/             # File, I/O, and PDF helpers
-template/            # Report templates and cover assets
-pics/                # Example figures
-scripts/             # Example analysis scripts
-local_tests/         # Local test scripts and outputs
+  core.py              # Main entry point — Brief class
+  config/              # Model and runtime configuration (YAML)
+  graph/               # LangGraph state graph and subgraph nodes
+    brief.py           #   Main graph: 4-node pipeline
+    synthesist.py      #   Subgraph: multimodal caption + summary
+    thesis.py          #   Subgraph: discussion/conclusion synthesis
+    report.py          #   Subgraph: full report assembly + post-processing
+  prompts/             # LLM prompt templates (Markdown)
+    synthesist.md      #   Prompt for figure caption generation
+    thesis.md          #   Prompt for discussion/conclusion synthesis
+    report.md          #   Prompt for report structure and writing
+  utils/               # Helpers
+    filemanager.py     #   Image/script discovery under project path
+    io.py              #   File I/O utilities
+    md_to_pdf.py       #   Markdown-to-PDF converter (Playwright)
+    prase_md_template.py  # Template placeholder substitution engine
+    setup.py           #   System initialization
+template/              # Report templates and cover assets
+  BGI_SY/              #   Commercial template pack
+    cover.md           #   Cover page template
+    pics/              #   Cover background / watermark images
+  repo.md              #   Commercial delivery template
+  repo_temp.md         #   Minimal working template (used in tests)
+pics/                  # Example figures
+scripts/               # Example analysis scripts
+local_tests/           # Test scripts and outputs
+  fudan.py             #   End-to-end scRNA-seq report generation test
+  generate_caption_test.py
+  generate_report_test.py
+  output/              #   Generated reports and test results
 ```
 
 ## Installation
 
-Create a dedicated Python environment and install the dependencies:
+Create a Python environment and install dependencies:
 
 ```bash
 pip install -r requirements.txt
+
+# If using Playwright for PDF export, install the browser:
+playwright install chromium
 ```
 
-If you use Conda, activate your environment first and then install the requirements.
+If you use Conda, activate your environment first, then install requirements.
 
 ## Configuration
 
-Model settings live in [src/Brief/config/config.yaml](src/Brief/config/config.yaml).
-If you prefer a template first, start from [src/Brief/config/config.yaml.example](src/Brief/config/config.yaml.example).
+Model settings are in [src/Brief/config/config.yaml](src/Brief/config/config.yaml). Start from [config.yaml.example](src/Brief/config/config.yaml.example) if needed.
 
-You will need to fill in:
+You need to configure:
 
-- `CHAT_MODEL_API`: API key, base URL, and model name for the text model.
-- `MULTIMODAL_CHAT_MODEL_API`: configuration for the vision-capable model.
-- `ENABLE_THINKING`: whether to enable model-side reasoning features.
-- `ENABLE_SEARCH`: whether to enable web search capabilities.
+- `CHAT_MODEL_API` — API key, base URL, and model name for the text/reasoning model (e.g., GPT-4o, Qwen, DeepSeek)
+- `MULTIMODAL_CHAT_MODEL_API` — configuration for the vision-capable model
+- `ENABLE_THINKING` — whether to enable model-side reasoning features
+- `ENABLE_SEARCH` — whether to enable web search (requires Tavily API key)
 
 ## Input Folder Convention
 
-By default, the project treats the provided `project_path` as the project root and reads content in the following way:
-
-- `pics/`: required, and must contain at least one image.
-- `scripts/`: optional; if present, the first script found will be used as contextual input.
-
-Your project folder should therefore look something like this:
+The `project_path` is treated as the project root and is expected to contain:
 
 ```text
 your_project/
-  pics/
+  pics/               # Required — contains analysis figures
     figure_1.png
     figure_2.png
-  scripts/
-    analysis.py
+  scripts/            # Optional — analysis script (first found is used)
+    scanpy_ppl.py
 ```
 
 ## Quick Start
-
-Minimal example:
 
 ```python
 from Brief.utils.setup import setup_brief
@@ -87,58 +119,82 @@ report_md, report_dict = brief.Run(
     task="Generate project report",
     input_wrap={
         "project_path": "/path/to/your_project",
-        "background": "Describe the research background, analysis goal, and data context here.",
-        "output_lang": "en-US",
-        "report_template": "template/repo.md",
+        "background": "Describe research background, analysis goals, and data context.",
+        "output_lang": "zh-CN",
+        "report_template": "template/repo_temp.md",
     },
     project_id="p01",
 )
 
 print(report_md)
-print(report_dict)
 ```
 
-## Local Test
+## PDF Export
 
-The repository includes a batch caption test script that checks whether the multimodal subgraph can process images under `pics/`:
+PDF conversion runs automatically as the final step of report generation — the `.pdf` file is created alongside the Markdown output (same path, `.pdf` extension).
+
+The PDF pipeline:
+1. Splits the Markdown at `<!-- __BODY_START__ -->` into cover and body sections
+2. Renders cover page (without page numbers) as a separate PDF
+3. Measures heading positions to update table of contents page numbers
+4. Renders body content (with page numbers) and overlays a background watermark
+5. Merges cover + TOC + body into a single PDF
+
+## Local Tests
 
 ```bash
+# End-to-end scRNA-seq report generation (8 figures)
+python local_tests/fudan.py
+
+# Caption-only test
 python local_tests/generate_caption_test.py
+
+# Report generation test
+python local_tests/generate_report_test.py
 ```
 
-The script writes structured output to [local_tests/output/generate_caption_result.json](local_tests/output/generate_caption_result.json).
+Outputs are written to `local_tests/output/`:
+- `auto_report.md` — generated Markdown report
+- `*_result.json` — test summary with timing and status
 
 ## Output
 
-The current workflow produces three main layers of content:
+The pipeline produces three layers of content:
 
-- Captions: descriptive titles and figure legends for individual images.
-- Section summaries: integrated summaries that combine image, script, and background context.
-- Discussion and conclusion: higher-level narrative generated from multiple section summaries.
+1. **Captions** — per-figure title and concise axes/panel description
+2. **Section summaries** — integrated analysis combining image content, script context, and background
+3. **Discussion + Conclusion + Key Takeaways** — higher-level synthesis across all sections
 
-In the intended workflow, these outputs are then assembled into a Markdown report template and exported to PDF.
+These are assembled into a structured Markdown report with table of contents, embedded figures, citations, and references.
 
-## Use Cases
+## Template System
 
-- Organizing single-cell or single-nucleus transcriptomics reports.
-- Archiving figures and analysis results from bioinformatics projects.
-- Turning analysis plots, scripts, and context into writing-ready draft text for reports or papers.
+Templates use `{{Placeholder}}` syntax. The engine at [prase_md_template.py](src/Brief/utils/prase_md_template.py) performs a single pass of regex substitution on the template file, replacing every `{{Placeholder}}` with its string value.
 
-## Current Status
+The body content with all figures, analysis text, discussion, conclusion, and references is generated by the LLM and injected wholesale into `{{Body_Content}}`. The cover area has a few dedicated placeholders:
 
-BIA-Brief is a prototype. The figure-caption and section-summary chain is in place, but the full report assembly and PDF export pipeline is still being completed. If you plan to use it in a production workflow, validate your own templates and model settings end-to-end first.
+| Placeholder | Source |
+|-------------|--------|
+| `{{Body_Content}}` | LLM-generated report body (full HTML) |
+| `{{Cover_Report_Title}}` | `cover_report_title` from report output, or falls back to `report_title` |
+| `{{Cover_Report_Date}}` | Current date (`datetime.now().strftime("%Y-%m-%d")`) |
+| `{{Cover_Image_Path}}` | Relative path to `template/BGI_SY/pics/cover.png` |
+| `{{Cover_Copyright_Text}}` | Default: `©2026All Rights Reserved` |
+
+Custom placeholders can be passed via `template_fields` in the `input_wrap` — they will be substituted into the template if defined, or replaced with an empty string if not.
 
 ## Dependencies
 
-Key dependencies include:
+Key dependencies:
 
-- LangChain / LangGraph
-- OpenAI-compatible text and multimodal models
-- PyYAML
-- markdown, pypdf, and playwright
+- **LangChain / LangGraph** — multi-agent orchestration
+- **OpenAI-compatible API** — text and multimodal models
+- **PyYAML** — configuration
+- **markdown + pypdf + playwright** — PDF export
+- **Pillow** — image handling
 
-See [requirements.txt](requirements.txt) for the full dependency list.
+See [requirements.txt](requirements.txt) for the full list.
 
 ## Acknowledgements
 
-This project is designed to help automate bioinformatics reporting during the early stages of project summaries, result organization, and manuscript drafting.
+Designed to automate bioinformatics report generation for early-stage project summaries, result organization, and manuscript drafting.

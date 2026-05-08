@@ -1,10 +1,11 @@
 import logging
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from ..utils import *
 from ..config import *
 from .synthesist import create_synthesist_agent
-from .thesis import create_thesis_agent  
+from .thesis import create_thesis_agent
 from .report import create_report_agent
 
 import operator
@@ -51,6 +52,7 @@ def create_brief_agent(
         output_lang: str
         report_template: str
         template_fields: dict[str, Any]
+        output_path: str
 
         #parameters
         # n_iter: int
@@ -136,19 +138,16 @@ def create_brief_agent(
             "script_abs_dir": script_abs_dir,
         }
 
-    def node_summary_section(state:State):
+    def node_summary_section(state: State):
         # Pass inputs
         background = state['background']
         pic_abs_dirs = state['pic_abs_dirs']
         script_abs_dir = state['script_abs_dir']
         output_lang = state['output_lang']
 
-        caption_items = []
-        section_summary_items = []
-
-        for index, pic_abs_dir in enumerate(pic_abs_dirs, start=1):
+        def _process_single_image(index: int, pic_abs_dir: str):
+            """Process a single image."""
             figure_id = f"Figure {index}"
-
             synthesist_input = {
                 "background": background,
                 "output_lang": output_lang,
@@ -157,7 +156,7 @@ def create_brief_agent(
                 "script_path": script_abs_dir,
             }
 
-            logger.info("Invoking synthesist subgraph for: %s", pic_abs_dir)
+            logger.info("[%d/%d] Processing %s", index, len(pic_abs_dirs), pic_abs_dir)
             try:
                 synthesist_state = synthesist_agent.invoke(
                     synthesist_input,
@@ -167,22 +166,41 @@ def create_brief_agent(
                 caption_body = synthesist_state.get('caption_body', '')
                 caption = synthesist_state['caption']
                 section_summary = synthesist_state['section_summary']
+
+                logger.info("[%d/%d] Completed %s", index, len(pic_abs_dirs), pic_abs_dir)
+                return {
+                    "caption": {
+                        "image_path": pic_abs_dir,
+                        "caption_title": caption_title,
+                        "caption_body": caption_body,
+                        "caption": caption,
+                    },
+                    "section_summary": {
+                        "image_path": pic_abs_dir,
+                        "section_summary": section_summary,
+                    },
+                }
             except Exception:
-                logger.exception("Error invoking synthesist subgraph for image: %s", pic_abs_dir)
+                logger.exception("[%d/%d] Failed %s", index, len(pic_abs_dirs), pic_abs_dir)
                 raise
 
-            caption_items.append({
-                "image_path": pic_abs_dir,
-                "caption_title": caption_title,
-                "caption_body": caption_body,
-                "caption": caption,
-            })
-            section_summary_items.append({
-                "image_path": pic_abs_dir,
-                "section_summary": section_summary,
-            })
+        logger.info("Processing %d images in parallel...", len(pic_abs_dirs))
+
+        # Process all images in parallel using ThreadPoolExecutor
+        results = []
+        with ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(_process_single_image, index, pic_abs_dir): (index, pic_abs_dir)
+                for index, pic_abs_dir in enumerate(pic_abs_dirs, start=1)
+            }
+            for future in as_completed(futures):
+                results.append(future.result())
 
         logger.debug("END node_summary_section")
+
+        caption_items = [r["caption"] for r in results]
+        section_summary_items = [r["section_summary"] for r in results]
+
         return {
             "captions": caption_items,
             "section_summaries": section_summary_items,
@@ -251,6 +269,7 @@ def create_brief_agent(
                 "background": background,
                 "output_lang": output_lang,
                 "report_template": report_template,
+                "output_path": state.get("output_path", ""),
                 "pic_abs_dirs": pic_abs_dirs,
                 "captions": captions,
                 "section_summaries": section_summaries,
@@ -265,7 +284,14 @@ def create_brief_agent(
         if not report_md:
             raise ValueError("Report agent did not return report_md.")
 
-        report_output_path = Path(project_path).expanduser().resolve() / "local_tests" / "output" / "auto_report.md"
+        project_root = Path(project_path).expanduser().resolve()
+        output_path_raw = state.get("output_path", "")
+        if output_path_raw and output_path_raw.startswith("/"):
+            report_output_path = Path(output_path_raw)
+        elif output_path_raw:
+            report_output_path = project_root / output_path_raw
+        else:
+            report_output_path = project_root / "local_tests" / "output" / "auto_report.md"
         report_output_path.parent.mkdir(parents=True, exist_ok=True)
         report_output_path.write_text(report_md, encoding="utf-8")
 

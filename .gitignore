@@ -2,7 +2,11 @@ local_tests/
 src/Brief/config/config.yaml
 **/__pycache__/
 .vscode/
+.claude/
 requirements.txt
 *.yaml
 .github/
 pics/
+scripts/
+template/BGI_SY/repo-temp-pics/
+**.docx

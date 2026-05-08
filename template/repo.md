@@ -624,7 +624,7 @@ table.report-table td,
 
 
 
-![图 2](../pics/2.png)
+![图 2](BGI_SY/repo-temp-pics/2.png)
 
 
 
@@ -634,7 +634,7 @@ table.report-table td,
 
 
 
-![图 1](../pics/1.png)
+![图 1](BGI_SY/repo-temp-pics/1.png)
 
 
 
@@ -652,7 +652,7 @@ table.report-table td,
 
 
 
-![图 3](../pics/3.png)
+![图 3](BGI_SY/repo-temp-pics/3.png)
 
 
 
@@ -666,7 +666,7 @@ table.report-table td,
 
 
 
-![图 4](../pics/4.png)
+![图 4](BGI_SY/repo-temp-pics/4.png)
 
 
 
@@ -681,7 +681,7 @@ table.report-table td,
 
 
 
-![图 6](../pics/6.png)
+![图 6](BGI_SY/repo-temp-pics/6.png)
 
 
 
@@ -689,8 +689,7 @@ table.report-table td,
 
 
 
-![图 5](../pics/5.png)
-
+![图 5](BGI_SY/repo-temp-pics/5.png)
 
 
 <p align='center'>图7 Leiden算法细胞聚类，分辨率为0.30UMAP图。</p>
@@ -701,7 +700,7 @@ table.report-table td,
 
 
 
-![图 7](../pics/7.png)
+![图 7](BGI_SY/repo-temp-pics/7.png)
 
 
 
@@ -711,7 +710,7 @@ table.report-table td,
 
 
 
-![图 8](../pics/8.png)
+![图 8](BGI_SY/repo-temp-pics/8.png)
 
 
 
@@ -723,7 +722,7 @@ table.report-table td,
 
 
 
-![图 9](../pics/9.png)
+![图 9](BGI_SY/repo-temp-pics/9.png)
 
 
 
@@ -733,7 +732,7 @@ table.report-table td,
 
 <p style='text-indent:18.20pt'>异基因表达功能富集分析是单细胞转录组数据解释中的重要一环，其核心目的是挖掘每个细胞亚群中特异性表达基因所涉及的生物学功能及通路，以揭示细胞在生理或病理状态下可能承担的角色。在本研究中，我们利用富集分析方法对各 cluster 的 marker 基因进行了 GO 功能注释和 KEGG 通路富集分析，系统解析其功能特性。GO 分析显示，不同细胞亚群的差异表达基因主要富集于诸如信号转导、代谢调控、细胞周期、激素应答等关键生物过程，提示不同 cluster 在发育分化、应激反应及代谢活动中具有特定功能。Pathway 分析结果进一步表明，多数差异基因显著富集于“植物激素信号转导”、“MAPK 信号通路”、“蛋白质加工”、“抗病相关途径”等典型路径，揭示出这些细胞群在信号应答与调控机制中的潜在作用。这些功能富集结果不仅为我们理解各细胞亚群的功能特征提供了重要线索，也为后续探索细胞发育动态和分子机制研究提供了理论基础和研究方向。</p>
 
-![图片](extracted_images/body_img_005.png)
+![图片](BGI_SY/repo-temp-pics/body_img_005.png)
 
 <p align='center'>图11 差异表达基因的GO与Pathway富集分析可视化图。</p>
 
@@ -743,7 +742,7 @@ table.report-table td,
 
 <p>从样品接收到项目交付的整体项目流程如下：</p>
 
-![图片](extracted_images/body_img_006.jpeg)
+![图片](BGI_SY/repo-temp-pics/body_img_006.jpeg)
 
 <p align='center'>图1 项目流程图。</p>
 
@@ -753,7 +752,7 @@ table.report-table td,
 
 <p style='text-indent:18.20pt'>DNBelab C4 技术是基于负压的液滴微流控系统， 通过引入自主专利的液滴标签技术 (Disc-seq : Droplet-indexed highthroughput single-cell sequencing) ， 将带有标签的捕获磁珠与单个细胞或者细胞核包裹在液滴中， 采用Droplet index的技术实现磁珠的超泊松分布， 在液滴中完成细胞裂解和捕获mRNA或DNA分子及用于识别来自同一液滴磁珠的标签序列， 对cDNA和Droplet index进行文库构建和测序， 即可一次性获得大量细胞的基因表达或染色质开放区基因信息， 如下图所示。</p>
 
-![图片](extracted_images/body_img_007.jpeg)
+![图片](BGI_SY/repo-temp-pics/body_img_007.jpeg)
 
 <p align='center'>图2 DNBelab C4单细胞技术原理示意图。</p>
 
@@ -761,7 +760,7 @@ table.report-table td,
 
 <p style='text-indent:18.20pt'>cDNA经PCR扩增、 酶切、 筛选、 再扩增、 成环、 构建可用于DNBSEQ测序的标准文库后， 进行上机测序。 文库结构如下图所示。</p>
 
-![图片](extracted_images/body_img_008.png)
+![图片](BGI_SY/repo-temp-pics/body_img_008.png)
 
 <p align='center'>图3 单细胞测序文库结构示意图。</p>
 

@@ -20,9 +20,17 @@ def discover_project_files(project_path: str) -> dict[str, Any]:
     if not pic_dir.exists() or not pic_dir.is_dir():
         raise FileNotFoundError(f"Could not find picture directory: {pic_dir}")
 
+    # Prefer pics/figures/ subdirectory if it exists, otherwise scan pics/ root
+    figures_dir = pic_dir / "figures"
+    if figures_dir.exists() and figures_dir.is_dir():
+        pic_search_dir = figures_dir
+        logger.info("Found figures subdirectory, scanning: %s", pic_search_dir)
+    else:
+        pic_search_dir = pic_dir
+
     pic_abs_dirs = sorted(
         str(pic_path.resolve())
-        for pic_path in pic_dir.rglob("*")
+        for pic_path in pic_search_dir.rglob("*")
         if pic_path.is_file() and pic_path.suffix.lower() in pic_exts
     )
     if len(pic_abs_dirs) == 0:

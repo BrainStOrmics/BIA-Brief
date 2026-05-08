@@ -90,6 +90,7 @@ class Brief:
         self.output_lang = input_wrap['output_lang']
         self.report_template = input_wrap['report_template']
         self.template_fields = input_wrap.get('template_fields', {})
+        self.output_path = input_wrap.get('output_path', '')
 
         # Pass agent input
         agent_input = {
@@ -99,6 +100,7 @@ class Brief:
             "output_lang": self.output_lang,
             "report_template": self.report_template,
             "template_fields": self.template_fields,
+            "output_path": self.output_path,
             }
         
         # Run agent

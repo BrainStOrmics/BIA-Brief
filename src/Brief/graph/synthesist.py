@@ -58,11 +58,8 @@ def create_synthesist_agent(
     # Define nodes
     #----------------
     
-    def node_synthesist(state:State):
-        """
-        """
-        logger.debug("START node_synthesist")
-        logger.info("============Brief============\nStarting synthesist subagent...\n")
+    def node_synthesist(state: State):
+        """Process single image and generate caption + section summary."""
         # Pass inputs
         background = state['background']
         output_lang = state['output_lang']
@@ -70,103 +67,80 @@ def create_synthesist_agent(
         image_path = state['image_path']
         script_path = state['script_path']
 
-        # Check pic file
-        logger.info("Get picture...")
+        # Check image file
         if not check_image_exists(image_path):
-            logger.debug("Image file: %s does not exist.", image_path)
             raise FileNotFoundError(f"Image file {image_path} does not exist.")
-        else:
-            pic_64, pic_mime_type = image_to_base64_for_llm(image_path)
+        pic_64, pic_mime_type = image_to_base64_for_llm(image_path)
 
         # Check script file
-        logger.info("Get script...")
-        script_content = "The code to generate the following image is as follows:\n"
-        if len(script_path) == 0:
-            logger.info("No script file provided, skip.")
-            script_content = ""
-        else:
+        script_content = ""
+        if script_path:
             if check_file_exists(script_path):
-                script_content += read_code_file(script_path) + '\n'
-            else: 
-                logger.info("Could not find script file in",script_path,", skip.")
-                script_content = ""
-        
-        # Call prompt template
-        prompt, input_vars = load_prompt_template('synthesist')
-        logger.debug(
-            "Using prompt:\n--------prompt--------\n"+
-            str(prompt)+
-            "\n----------------")
+                script_content = read_code_file(script_path)
+            else:
+                logger.debug("Script file not found: %s, skipping.", script_path)
 
-        # Parse human input
+        # Load prompt template
+        prompt, input_vars = load_prompt_template('synthesist')
+
+        # Build message with image and text
         human_input = HumanMessage(
-            content = [
-            {
-                "type": "text",
-                "text": (
-                    "Write a figure title and a separate figure explanation for the following image. "
-                    f"Use the exact figure identifier '{figure_id}' as the title numbering. "
-                    + script_content
-                )
-            },
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:{pic_mime_type};base64,{pic_64}"}
-            },
-        ]
+            content=[
+                {
+                    "type": "text",
+                    "text": (
+                        f"Write a figure title and explanation for the following image. "
+                        f"Use identifier '{figure_id}' in the title. " + script_content
+                    )
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{pic_mime_type};base64,{pic_64}"}
+                },
+            ]
         )
 
-        # Construct input message
         message = [
             SystemMessage(content=prompt.format(
-                background = background,
-                output_lang = output_lang,
-                figure_id = figure_id,
-                )),
+                background=background,
+                output_lang=output_lang,
+                figure_id=figure_id,
+            )),
             human_input
         ]
 
-        # Chose code run env by llm
+        # Invoke LLM with retry
         chain = mmchat_model | JsonOutputParser()
-        i = 0
-        while i < max_retry: 
+        for attempt in range(max_retry):
             try:
                 json_output = chain.invoke(message)
-                # Parse outputs
                 caption_title = json_output.get('caption_title', '')
                 caption_body = json_output.get('caption_body', '')
-                caption = json_output['caption']
-                section_summary = json_output['section_summary']
-                if not caption:
-                    caption_parts = [part for part in [caption_title, caption_body] if part]
-                    caption = " ".join(caption_parts)
-                # To log
-                logger.info(
-                    "".join([
-                        "LLM response:\n----------------",
-                        "\ncaption_title:", caption_title,
-                        "\ncaption_body:", caption_body,
-                        "\ncaption:",caption,
-                        "\nsection_summary:",section_summary,
-                        "\n----------------",
-                    ])
-                    )
-                break
+                caption = json_output.get('caption', '')
+                section_summary = json_output.get('section_summary', '')
+
+                # Fallback: build caption from title + body
+                if not caption and (caption_title or caption_body):
+                    caption = " ".join(part for part in [caption_title, caption_body] if part)
+
+                logger.debug(
+                    "Generated for %s: title=%d chars, summary=%d chars",
+                    figure_id, len(caption_title), len(section_summary)
+                )
+                return {
+                    "caption_title": caption_title,
+                    "caption_body": caption_body,
+                    "caption": caption,
+                    "section_summary": section_summary,
+                }
 
             except Exception as e:
-                i+=1
-                if i == max_retry:
-                    logger.exception("Get exception with"+str(i)+"tries:\n")
+                if attempt >= max_retry - 1:
+                    logger.exception("Failed after %d attempts for %s", max_retry, figure_id)
                     raise
-                else:
-                    logger.debug("Get exception when parsing env:\n"+str(e))
-        logger.debug("END node_synthesist")
-        return{
-            "caption_title": caption_title,
-            "caption_body": caption_body,
-            "caption": caption,
-            "section_summary": section_summary,
-        }
+                logger.debug("Retry %d/%d for %s: %s", attempt + 1, max_retry, figure_id, e)
+
+        return {}
 
     #----------------
     # Compile graph
