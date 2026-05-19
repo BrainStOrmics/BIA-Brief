@@ -38,7 +38,7 @@ A4_WIDTH_MM = 210.0
 BOTTOM_MARGIN_MM = 30.0
 FOOTER_SAFE_SPACE_MM = 42.0
 MM_TO_PX = 96.0 / 25.4
-PAGE_CONTENT_HEIGHT_PX = (A4_HEIGHT_MM - BOTTOM_MARGIN_MM) * MM_TO_PX
+PAGE_CONTENT_HEIGHT_PX = (A4_HEIGHT_MM - 25.4 * 2) * MM_TO_PX
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 PROJECT_ROOT = REPO_ROOT.parent.parent
@@ -233,23 +233,24 @@ def _build_body_html_document(body_html: str, background_image_uri: str, title: 
     <style>
         @page {{
             size: A4;
-            margin: 0 0 {BOTTOM_MARGIN_MM}mm 0;
+            margin: 1in 16mm;
         }}
         html, body {{
             width: 100%;
             height: 100%;
         }}
         body {{
-            font-family: "Arial", "Microsoft YaHei", "PingFang SC", "SimSun", sans-serif;
-            font-size: 15pt;
-            line-height: 1.7;
+            font-family: Helvetica, "Liberation Sans", Arial, "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Microsoft YaHei", sans-serif;
+            font-size: 11pt;
+            font-weight: 400;
+            line-height: 1.5;
             color: #222;
             margin: 0;
         }}
         .content {{
             width: 100%;
             box-sizing: border-box;
-            padding: 14mm 16mm 16mm;
+            padding: 0;
         }}
         .ref-title {{
             display: flex;
@@ -271,6 +272,33 @@ def _build_body_html_document(body_html: str, background_image_uri: str, title: 
             flex: 0 0 18px;
         }}
         .ref-title .ref-text {{
+            letter-spacing: 0.5px;
+        }}
+        .analysis-title, .method-title, .faq-title, .help-title {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0 8px 0;
+            font-family: Arial, "SimSun", "Songti SC", serif;
+            font-size: 16pt;
+            font-weight: 700;
+            color: #0d63b8;
+            line-height: 1;
+        }}
+        .analysis-title .analysis-dot,
+        .method-title .method-dot,
+        .faq-title .faq-dot,
+        .help-title .help-dot {{
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #0d63b8;
+            flex: 0 0 18px;
+        }}
+        .analysis-title .analysis-text,
+        .method-title .method-text,
+        .faq-title .faq-text,
+        .help-title .help-text {{
             letter-spacing: 0.5px;
         }}
         .cover-wrapper {{
@@ -348,9 +376,13 @@ def _build_body_html_document(body_html: str, background_image_uri: str, title: 
             margin: 0;
             white-space: pre-wrap;
             word-break: break-word;
-            font-family: "Microsoft YaHei", "PingFang SC", "SimSun", sans-serif;
-            font-size: 10.5pt;
-            line-height: 1.5;
+            font-family: "SF Mono", Menlo, Consolas, monospace;
+            font-size: 9pt;
+            line-height: 1.4;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 3pt;
+            padding: 10pt 12pt;
         }}
         table.report-table {{
             width: 100%;
@@ -375,10 +407,77 @@ def _build_body_html_document(body_html: str, background_image_uri: str, title: 
         table.report-table p {{
             margin: 0.2em 0;
         }}
-        h1, h2, h3 {{
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12pt 0;
+            font-size: 10pt;
+        }}
+        th, td {{
+            border-bottom: 0.5pt solid #ccc;
+            padding: 5pt 8pt;
+            text-align: left;
+            vertical-align: top;
+        }}
+        th {{
+            font-weight: 700;
+            border-bottom: 1pt solid #111;
+            background: transparent;
+        }}
+        code {{
+            font-family: "SF Mono", Menlo, Consolas, monospace;
+            font-size: 9.5pt;
+            background: #f4f4f4;
+            padding: 1pt 3pt;
+            border-radius: 2pt;
+            border: 0.5pt solid #e4e4e4;
+        }}
+        pre {{
+            font-family: "SF Mono", Menlo, Consolas, monospace;
+            font-size: 9pt;
+            line-height: 1.4;
+            background: #f5f5f5;
+            padding: 10pt 12pt;
+            border: 1px solid #ddd;
+            border-radius: 3pt;
+            margin: 12pt 0;
+            overflow: hidden;
+            white-space: pre-wrap;
+        }}
+        pre > code {{ background: none; border: 0; padding: 0; font-size: inherit; }}
+        blockquote {{
+            margin: 12pt 0;
+            padding: 0 0 0 18pt;
+            border-left: 2pt solid #111;
+            color: #333;
+            font-size: 11pt;
+            line-height: 1.5;
+        }}
+        blockquote p {{ margin-bottom: 6pt; }}
+        h1 {{
+            font-size: 22pt;
+            line-height: 1.2;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            margin: 0 0 0.25in;
             color: #1f2d3d;
-            margin-top: 0.9em;
-            margin-bottom: 0.5em;
+            page-break-after: avoid;
+        }}
+        h2 {{
+            font-size: 15pt;
+            line-height: 1.3;
+            font-weight: 700;
+            margin: 24pt 0 6pt;
+            color: #1f2d3d;
+            page-break-after: avoid;
+        }}
+        h3 {{
+            font-size: 12pt;
+            line-height: 1.4;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #333;
+            margin: 18pt 0 4pt;
             page-break-after: avoid;
         }}
         img {{
@@ -425,10 +524,11 @@ def collect_heading_pages(html_path: Path) -> list[dict[str, int | str]]:
         heading_data = page.evaluate(
             f"""() => {{
                 const pageHeight = {PAGE_CONTENT_HEIGHT_PX};
-                const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'))
+                const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,.analysis-title,.method-title,.faq-title,.ref-title'))
                     .filter(el => !el.closest('.toc-block') && !el.closest('.cover-wrapper'))
                     .map(el => {{
-                        const text = (el.textContent || '').replace(/\\s+/g, ' ').trim();
+                        const textEl = el.querySelector('.analysis-text,.method-text,.faq-text,.ref-text') || el;
+                        const text = (textEl.textContent || '').replace(/\\s+/g, ' ').trim();
                         const rect = el.getBoundingClientRect();
                         return {{
                             text,
@@ -552,10 +652,10 @@ def _render_html_to_pdf(html_path: Path, output_pdf: Path, show_page_numbers: bo
                 else "<span></span>"
             ),
             margin={
-                "top": "0mm",
-                "right": "0mm",
-                "bottom": f"{BOTTOM_MARGIN_MM}mm",
-                "left": "0mm",
+                "top": "1in",
+                "right": "16mm",
+                "bottom": "1in",
+                "left": "16mm",
             },
         )
         browser.close()
@@ -680,7 +780,7 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
         if fallback_background.exists():
             background_image_path = fallback_background
         else:
-            raise FileNotFoundError(f"背景图片不存在: {background_image_path}")
+            background_image_path = None
 
     body_html = convert(body_md)
     toc_body_html, content_body_html = _split_toc_and_content(body_html)
@@ -693,14 +793,18 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
     bg_pdf = output_pdf.parent / f"_{output_pdf.stem}_bg.pdf"
 
     try:
+        has_bg = background_image_path is not None
+        bg_uri = background_image_path.as_uri() if has_bg else ""
+
         # Render background watermark PDF (single A4 page with just the bg image)
-        _create_background_pdf(background_image_path.as_uri(), bg_pdf)
+        if has_bg:
+            _create_background_pdf(bg_uri, bg_pdf)
 
         if cover_md:
             cover_html = convert(cover_md)
             cover_html_doc = build_html_document(
                 cover_html,
-                background_image_path.as_uri(),
+                bg_uri,
                 title=md_path.stem,
                 base_href=base_href,
                 for_cover=True,
@@ -717,18 +821,14 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
             # Measure heading positions from content-only rendering
             content_full_html = build_html_document(
                 content_body_html,
-                background_image_path.as_uri(),
+                bg_uri,
                 title=md_path.stem,
                 base_href=base_href,
             )
             temp_html.write_text(content_full_html, encoding="utf-8")
 
             heading_data = collect_heading_pages(temp_html)
-            heading_texts = [str(item["text"]) for item in heading_data]
-
-            _render_html_to_pdf(temp_html, measure_pdf, show_page_numbers=True)
-            # Page numbers from content-only PDF = content page numbers (no offset needed)
-            toc_page_numbers = collect_heading_pages_from_pdf(measure_pdf, heading_texts)
+            toc_page_numbers = [item["page"] for item in heading_data]
 
             if toc_page_numbers:
                 toc_body_html = replace_toc_page_numbers(toc_body_html, toc_page_numbers)
@@ -736,24 +836,26 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
             # Render TOC PDF (no footer page numbers)
             toc_full_html = build_html_document(
                 toc_body_html,
-                background_image_path.as_uri(),
+                bg_uri,
                 title=md_path.stem,
                 base_href=base_href,
             )
             temp_html.write_text(toc_full_html, encoding="utf-8")
             _render_html_to_pdf(temp_html, toc_pdf, show_page_numbers=False)
-            _add_background_to_pdf(toc_pdf, bg_pdf)
+            if has_bg:
+                _add_background_to_pdf(toc_pdf, bg_pdf)
 
             # Render content PDF (with footer page numbers, starting at 1)
             temp_html.write_text(content_full_html, encoding="utf-8")
             _render_html_to_pdf(temp_html, content_pdf, show_page_numbers=True)
-            _add_background_to_pdf(content_pdf, bg_pdf)
+            if has_bg:
+                _add_background_to_pdf(content_pdf, bg_pdf)
         else:
             # No TOC — render entire body as one PDF with page numbers
             temp_html.write_text(
                 build_html_document(
                     body_html,
-                    background_image_path.as_uri(),
+                    bg_uri,
                     title=md_path.stem,
                     base_href=base_href,
                 ),
