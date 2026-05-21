@@ -28,6 +28,9 @@ class llm_config:
 ## Brief
 class brief_config:
     PROJECT_ID = "p01"
+    PROJECT_PATH = ""       # Root dir containing pics/ and scripts/
+    REPORT_TEMPLATE = ""    # Path to report template markdown
+    OUTPUT_DIR = "output"   # Output directory (relative to PROJECT_PATH)
 
 # class synthesist_config:
 

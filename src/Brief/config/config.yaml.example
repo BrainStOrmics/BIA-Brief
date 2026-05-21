@@ -1,5 +1,5 @@
 llm_config:
-  # Setup chat/reasoning model, for sematic reasoning 
+  # Setup chat/reasoning model, for sematic reasoning
   CHAT_MODEL_API:
     api: # Your model api here
     url: # Your model url here
@@ -15,4 +15,8 @@ llm_config:
   ENABLE_THINKING: true
   ENABLE_SEARCH: false
 
-
+brief_config:
+  PROJECT_ID: "p01"
+  PROJECT_PATH: ""          # Root dir containing pics/ and scripts/
+  REPORT_TEMPLATE: "template/repo_temp.md"
+  OUTPUT_DIR: "output"

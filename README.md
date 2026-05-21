@@ -1,53 +1,47 @@
 # BIA-Brief
 
-Multi-agent bioinformatics report generation system. BIA-Brief orchestrates a LangGraph workflow that takes figures, analysis scripts, and research background, then produces a professional-grade Markdown report (with optional PDF export) in English or Chinese.
+Automated bioinformatics report generation system. BIA-Brief takes figures, analysis scripts, and research background, then produces a professional-grade Markdown report (with optional PDF export) in English or Chinese.
 
-The system is optimized for single-cell / single-nucleus transcriptomics projects, but can adapt to any bioinformatics domain where figures and analysis context are available.
+Optimized for single-cell / single-nucleus transcriptomics projects, but adaptable to any bioinformatics domain.
 
 ## Architecture
 
-The report generation pipeline consists of four sequential nodes in a LangGraph state graph:
-
 ```text
-File manager → Summary sections → Generate thesis → Generate report
+Indexer → ReAct Agent → Post-process → PDF
 ```
 
-| Node | Model | Responsibility |
+| Step | Model | Responsibility |
 |------|-------|----------------|
-| **File manager** | — (file system) | Discovers images under `pics/` and optional scripts under `scripts/` |
-| **Summary sections** | Multimodal (vision) | Processes each image in parallel — generates figure captions (title + body) and section summaries |
-| **Generate thesis** | Text (reasoning) | Synthesizes all section summaries into a coherent discussion, conclusion, and key takeaways |
-| **Generate report** | Text (reasoning) | Assembles the full report from all inputs — writes structured body content, table of contents, and references |
-
-## Features
-
-- **Parallel image processing** — all figures analyzed concurrently via `ThreadPoolExecutor`
-- **Figure embedding with renumbering** — figures placed near relevant analysis text and auto-renumbered
-- **Discussion + Conclusion synthesis** — higher-level narrative generated from individual section summaries
-- **Bilingual output** — Chinese and English with formal academic tone
-- **Template-driven rendering** — `{{placeholder}}` substitution against customizable templates
-- **Automatic PDF export** — PDF generated alongside Markdown
+| **Indexer** | Multimodal (vision) | Scans `pics/` and `scripts/`, generates figure captions and section summaries in parallel |
+| **ReAct Agent** | Text (reasoning) | Reads index, follows guides, assembles full report with embedded figures |
+| **Post-process** | — (deterministic) | Paragraph wrapping, figure renumbering (fallback), template rendering |
+| **PDF export** | — (Playwright) | Converts rendered Markdown to PDF with cover page, TOC, and page numbers |
 
 ## Project Layout
 
 ```text
 src/Brief/
-  core.py              # Main entry point — Brief class
+  core.py              # Main entry point — Brief class, orchestrates full pipeline
+  indexer.py           # Project scanner + parallel caption/summary generation
+  agent.py             # ReAct agent definition (langchain.agents.create_agent)
   config/              # Model and runtime configuration (YAML)
-  graph/               # LangGraph state graph and subgraph nodes
-    brief.py           #   Main graph: 4-node pipeline
-    synthesist.py      #   Subgraph: multimodal caption + summary
-    thesis.py          #   Subgraph: discussion/conclusion synthesis
-    report.py          #   Subgraph: full report assembly + post-processing
-  prompts/             # LLM prompt templates (Markdown)
-    synthesist.md      #   Prompt for figure caption generation
-    thesis.md          #   Prompt for discussion/conclusion synthesis
-    report.md          #   Prompt for report structure and writing
-  utils/               # Helpers
+    config.py          #   Config class definitions
+    config.yaml        #   Actual configuration (gitignored)
+    config.yaml.example #   Template config
+  tools/               # Generic tools available to the ReAct agent
+    file_ops.py        #   read_file, write_file
+    task_ops.py        #   create_task_list, mark_task_complete
+  prompts/             # LLM prompt templates (English only)
+    agent.md           #   Agent role and workflow steps
+    synthesist.md      #   Used by indexer for multimodal caption generation
+    thesis.md          #   Discussion/conclusion generation guide (agent reads at runtime)
+    report.md          #   Report assembly guide (agent reads at runtime)
+  utils/               # Helper utilities
     filemanager.py     #   Image/script discovery under project path
     io.py              #   File I/O utilities
     md_to_pdf.py       #   Markdown-to-PDF converter (Playwright)
-    prase_md_template.py  # Template placeholder substitution engine
+    parse_md_template.py  # Template placeholder substitution engine
+    postprocess.py     #   Figure embedding, renumbering, paragraph wrapping
     setup.py           #   System initialization
 template/              # Report templates and cover assets
   BGI_SY/              #   Commercial template pack
@@ -55,13 +49,14 @@ template/              # Report templates and cover assets
     pics/              #   Cover background / watermark images
   repo.md              #   Commercial delivery template
   repo_temp.md         #   Minimal working template (used in tests)
+  scRNA_base.md        #   scRNA-seq base template
 pics/                  # Example figures
 scripts/               # Example analysis scripts
 local_tests/           # Test scripts and outputs
   fudan.py             #   End-to-end scRNA-seq report generation test
   generate_caption_test.py
-  generate_report_test.py
   output/              #   Generated reports and test results
+.harness/              # Agent constraint system (rules, runbooks, docs)
 ```
 
 ## Installation
@@ -75,22 +70,58 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-If you use Conda, activate your environment first, then install requirements.
+If you use Conda, activate your environment first.
 
 ## Configuration
 
-Model settings are in [src/Brief/config/config.yaml](src/Brief/config/config.yaml). Start from [config.yaml.example](src/Brief/config/config.yaml.example) if needed.
+Model settings and project paths are in [src/Brief/config/config.yaml](src/Brief/config/config.yaml). Start from [config.yaml.example](src/Brief/config/config.yaml.example) if needed.
 
-You need to configure:
+### LLM Configuration
 
-- `CHAT_MODEL_API` — API key, base URL, and model name for the text/reasoning model (e.g., GPT-4o, Qwen, DeepSeek)
+- `CHAT_MODEL_API` — API key, base URL, and model name for the text/reasoning model
 - `MULTIMODAL_CHAT_MODEL_API` — configuration for the vision-capable model
 - `ENABLE_THINKING` — whether to enable model-side reasoning features
 - `ENABLE_SEARCH` — whether to enable web search (requires Tavily API key)
 
+### Brief Configuration
+
+- `PROJECT_PATH` — Root directory containing `pics/` and optional `scripts/`
+- `REPORT_TEMPLATE` — Path to the report template Markdown file
+- `OUTPUT_DIR` — Output directory (relative to `PROJECT_PATH`)
+- `PROJECT_ID` — Project identifier
+
+## Quick Start
+
+```python
+from Brief.utils.setup import setup_brief
+from Brief.config.config import llm_config, brief_config
+from Brief.core import Brief
+
+setup_brief()
+
+# Set project config
+brief_config.PROJECT_PATH = "/path/to/your_project"
+brief_config.REPORT_TEMPLATE = "template/repo_temp.md"
+brief_config.OUTPUT_DIR = "output"
+brief_config.PROJECT_ID = "p01"
+
+# Create and run
+brief = Brief(
+    chat_model=llm_config.MODELS["chat_model"],
+    mmchat_model=llm_config.MODELS["mmchat_model"],
+)
+
+report_md, report_dict = brief.Run(
+    background="Describe research background, analysis goals, and data context.",
+    output_lang="zh-CN",
+)
+
+print(report_md)
+```
+
 ## Input Folder Convention
 
-The `project_path` is treated as the project root and is expected to contain:
+The `PROJECT_PATH` is treated as the project root and is expected to contain:
 
 ```text
 your_project/
@@ -101,33 +132,20 @@ your_project/
     scanpy_ppl.py
 ```
 
-## Quick Start
+## Local Tests
 
-```python
-from Brief.utils.setup import setup_brief
-from Brief.config.config import llm_config
-from Brief.core import Brief
+```bash
+# End-to-end scRNA-seq report generation (8 figures)
+python local_tests/fudan.py
 
-setup_brief()
-
-brief = Brief(
-    chat_model=llm_config.MODELS["chat_model"],
-    mmchat_model=llm_config.MODELS["mmchat_model"],
-)
-
-report_md, report_dict = brief.Run(
-    task="Generate project report",
-    input_wrap={
-        "project_path": "/path/to/your_project",
-        "background": "Describe research background, analysis goals, and data context.",
-        "output_lang": "zh-CN",
-        "report_template": "template/repo_temp.md",
-    },
-    project_id="p01",
-)
-
-print(report_md)
+# Caption-only test (indexer only, uses cache on second run)
+python local_tests/generate_caption_test.py
 ```
+
+Outputs are written to `local_tests/output/`:
+- `report.md` — generated Markdown report
+- `report.pdf` — PDF export
+- `*_result.json` — test summary with timing and status
 
 ## PDF Export
 
@@ -140,28 +158,11 @@ The PDF pipeline:
 4. Renders body content (with page numbers) and overlays a background watermark
 5. Merges cover + TOC + body into a single PDF
 
-## Local Tests
-
-```bash
-# End-to-end scRNA-seq report generation (8 figures)
-python local_tests/fudan.py
-
-# Caption-only test
-python local_tests/generate_caption_test.py
-
-# Report generation test
-python local_tests/generate_report_test.py
-```
-
-Outputs are written to `local_tests/output/`:
-- `auto_report.md` — generated Markdown report
-- `*_result.json` — test summary with timing and status
-
 ## Output
 
 The pipeline produces three layers of content:
 
-1. **Captions** — per-figure title and concise axes/panel description
+1. **Captions** — per-figure title and concise axes/panel descriptions
 2. **Section summaries** — integrated analysis combining image content, script context, and background
 3. **Discussion + Conclusion + Key Takeaways** — higher-level synthesis across all sections
 
@@ -169,25 +170,23 @@ These are assembled into a structured Markdown report with table of contents, em
 
 ## Template System
 
-Templates use `{{Placeholder}}` syntax. The engine at [prase_md_template.py](src/Brief/utils/prase_md_template.py) performs a single pass of regex substitution on the template file, replacing every `{{Placeholder}}` with its string value.
+Templates use `{{Placeholder}}` syntax. The engine at [parse_md_template.py](src/Brief/utils/parse_md_template.py) performs a single pass of regex substitution on the template file, replacing every `{{Placeholder}}` with its string value.
 
 The body content with all figures, analysis text, discussion, conclusion, and references is generated by the LLM and injected wholesale into `{{Body_Content}}`. The cover area has a few dedicated placeholders:
 
 | Placeholder | Source |
 |-------------|--------|
 | `{{Body_Content}}` | LLM-generated report body (full HTML) |
-| `{{Cover_Report_Title}}` | `cover_report_title` from report output, or falls back to `report_title` |
+| `{{Cover_Report_Title}}` | Report title from agent's output |
 | `{{Cover_Report_Date}}` | Current date (`datetime.now().strftime("%Y-%m-%d")`) |
 | `{{Cover_Image_Path}}` | Relative path to `template/BGI_SY/pics/cover.png` |
 | `{{Cover_Copyright_Text}}` | Default: `©2026All Rights Reserved` |
-
-Custom placeholders can be passed via `template_fields` in the `input_wrap` — they will be substituted into the template if defined, or replaced with an empty string if not.
 
 ## Dependencies
 
 Key dependencies:
 
-- **LangChain / LangGraph** — multi-agent orchestration
+- **LangChain / LangGraph** — ReAct agent orchestration
 - **OpenAI-compatible API** — text and multimodal models
 - **PyYAML** — configuration
 - **markdown + pypdf + playwright** — PDF export

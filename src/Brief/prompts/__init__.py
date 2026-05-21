@@ -1,1 +1,1 @@
-from .prompt_templet import *
+from .prompt_template import load_prompt_template

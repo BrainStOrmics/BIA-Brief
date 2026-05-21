@@ -8,20 +8,12 @@ Your task is to integrate the `Research Background` with multiple `Section Summa
 
 1.  Execute the **[4. Decision Engine]** to align the tone and language.
 2.  Follow **[5. Procedures]** to cross-reference results and derive high-level biological implications.
-3.  Output the final synthesis as a precise JSON object defined in **[6. Output Format]**.
 
 ## 3. Inputs
 
--   **Research Background:**
-    -   The overarching goal, hypothesis, and scientific significance of the study.
-    `<<background>>`
-
--   **Section Summaries:**
-    -   A collection of summaries generated from individual analysis sections (including findings from images and code), will be provided later.
-
--   **Target Language:**
-    -   The preferred output language (e.g., "English", "Chinese").
-    `<<output_lang>>`
+-   **Research Background:** Provided in the user message.
+-   **Section Summaries:** Available in the project index file (Figure Captions section).
+-   **Target Language:** Provided in the user message as `output_lang`.
 
 ## 4. Decision Engine
 
@@ -48,32 +40,23 @@ Your task is to integrate the `Research Background` with multiple `Section Summa
 2.  **Summary of Evidence:** Briefly recap how the methods (code/analysis) led to the evidence.
 3.  **Future Directions:** Propose 2-3 logical next steps for the research based on the current conclusions.
 
----
+## 6. Output
 
-## 6. Output Format
+Generate the following content in your response. This content will be used when assembling the full report.
 
-**CRITICAL CONSTRAINT:** Your entire response must be a single, complete, and valid JSON object. **ABSOLUTELY NO** other text is allowed.
+**Discussion:** A cohesive narrative following Procedure A.
 
-#### JSON Schema
+**Conclusion:** A concise summary following Procedure B.
 
-```json
-{
-    "discussion": "<string>",
-    "conclusion": "<string>",
-    "key_takeaways": ["<string>", "<string>", "<string>"]
-}
-```
+**Key Takeaways:** 3-5 bullet points highlighting the most important results.
 
-#### Example Output (English Mode)
+**Example (English Mode):**
 
-```json
-{
-    "discussion": "The integration of single-cell transcriptomics and eQTL mapping in this study provides a novel high-resolution map of sheep muscle development. Our findings in Section 1 regarding the MyoD+ progenitor populations align with the regulatory variants identified in Section 2, suggesting that the rs12345 SNP modulates meat quality by altering the chromatin accessibility of key myogenic factors. Unlike previous bulk-tissue studies, our results highlight the cell-type-specific nature of these regulatory elements, which explains the high variance observed in prior breeding programs.",
-    "conclusion": "In conclusion, this research successfully identifies the cellular and genetic drivers of muscle hypertrophy in Dorper sheep. By leveraging a Bioinformatics AI Agent for multi-modal analysis, we demonstrated that the interplay between specific stromal clusters and TGF-beta signaling is the primary determinant of muscle fiber density. This framework sets a new standard for precision breeding in livestock.",
-    "key_takeaways": [
-        "Identified a novel MyoD+ progenitor sub-population driving muscle growth.",
-        "Validated the regulatory role of rs12345 in a cell-type-specific manner.",
-        "Established a reproducible multi-modal workflow for livestock genomics."
-    ]
-}
-```
+Discussion: "The integration of single-cell transcriptomics and eQTL mapping in this study provides a novel high-resolution map of sheep muscle development. Our findings in Section 1 regarding the MyoD+ progenitor populations align with the regulatory variants identified in Section 2, suggesting that the rs12345 SNP modulates meat quality by altering the chromatin accessibility of key myogenic factors. Unlike previous bulk-tissue studies, our results highlight the cell-type-specific nature of these regulatory elements, which explains the high variance observed in prior breeding programs."
+
+Conclusion: "In conclusion, this research successfully identifies the cellular and genetic drivers of muscle hypertrophy in Dorper sheep. By leveraging a Bioinformatics AI Agent for multi-modal analysis, we demonstrated that the interplay between specific stromal clusters and TGF-beta signaling is the primary determinant of muscle fiber density. This framework sets a new standard for precision breeding in livestock."
+
+Key Takeaways:
+- Identified a novel MyoD+ progenitor sub-population driving muscle growth.
+- Validated the regulatory role of rs12345 in a cell-type-specific manner.
+- Established a reproducible multi-modal workflow for livestock genomics.
