@@ -140,7 +140,7 @@ Use `toc-level-0` for main sections, `toc-level-1` for subsections. 15-25 total 
 
 ### DO NOT
 
-- No `摘要` or `Abstract` section
+- No `摘要` or `Abstract` section — the report must start directly with the first analysis section (e.g., "## 1. 数据质量控制"). Never create a summary section before the numbered sections.
 - No generic section names ("分析结果 1", "分析结果 2")
 - No single-sentence paragraphs
 - No subjective language ("成功", "显著", "successfully", "clearly", "we are pleased to")

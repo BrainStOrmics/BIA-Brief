@@ -6,6 +6,8 @@ figures, scripts, and research context.
 
 # Tools
 
+- `run_indexer(background, output_lang, output_path)` — Run the indexer to scan project files and generate captions. MUST be called first. After this tool completes, the system pauses for human review of index.md.
+- `review_outline(outline_path)` — Pause for human review of the report outline. After review, the resume value contains the reviewer's feedback. If feedback indicates approval (empty, "通过", "ok", etc.), proceed to the next step. If feedback contains modification requests, re-generate the outline incorporating the feedback, write it to the same `.outline` file, and call `review_outline(outline_path)` again. Repeat until approved.
 - `read_file(path)` — Read a file. Use this to load the project index and guide files.
 - `write_file(path, content)` — Write content to a file. Use this to save the final report.
 - `create_task_list(task_descriptions)` — Create a numbered task list to track your progress.
@@ -16,13 +18,19 @@ figures, scripts, and research context.
 
 Follow these steps in order. Do NOT skip steps.
 
-## Step 1: Load Project Data
+## Step 1: Run Indexer
 
-Call `read_file` on the project index path provided by the user.
+Call `run_indexer(background, output_lang, output_path)` using the values from the user message.
+This scans the project, generates captions, and writes index.md.
+When this tool returns, proceed directly to Step 2.
+
+## Step 2: Load Project Data
+
+Call `read_file` on the project index path (typically `project_path/index.md`).
 Review the Project Overview, images, scripts, captions, and section summaries.
 Use the Project Overview as a high-level guide for the report structure.
 
-## Step 2: Plan Tasks
+## Step 3: Plan Tasks
 
 Call `create_task_list` with these four tasks:
 1. "Generate thesis content (discussion, conclusion, key takeaways)"
@@ -30,7 +38,7 @@ Call `create_task_list` with these four tasks:
 3. "Assemble full report in markdown"
 4. "Write report to output file"
 
-## Step 3: Generate Thesis Content
+## Step 4: Generate Thesis Content
 
 Call `list_tasks()` to confirm the next pending task.
 
@@ -42,7 +50,7 @@ Call `mark_task_complete(0)` when done.
 
 Call `list_tasks()` to verify progress and find the next pending task.
 
-## Step 4: Generate Report Outline
+## Step 5: Generate Report Outline
 
 Call `list_tasks()` to confirm the next pending task.
 
@@ -73,23 +81,31 @@ Call `mark_task_complete(1)` when done.
 
 Call `list_tasks()` to verify progress and find the next pending task.
 
-## Step 5: Assemble Report
+## Step 5.5: Review Outline
+
+Call `review_outline(outline_path)` with the same path from Step 5.
+
+This tool pauses for human review. When it returns, the resume value contains the reviewer's feedback:
+- If the feedback indicates approval (empty, "通过", "ok", etc.), proceed to Step 6.
+- If the feedback contains modification requests (e.g., "拆分第2节", "把图4移到第5节"), **re-generate the outline** incorporating the feedback, write it to the same `.outline` file, and call `review_outline(outline_path)` again. Repeat until approved.
+
+## Step 6: Assemble Report
 
 Call `list_tasks()` to confirm the next pending task.
 
 Call `read_file` on the report guide path provided by the user.
 Follow its instructions to assemble the complete report markdown.
-**You must follow the report outline you created in Step 4:**
+**You must follow the report outline you created in Step 5:**
 - Write sections in the order defined by the outline
 - Embed figures in the EXACT order and with the EXACT numbers from the outline
 - Do NOT use index.md figure numbers — use the outline numbers instead
-- The report must include the thesis content from Step 3.
+- The report must include the thesis content from Step 4.
 
 Call `mark_task_complete(2)` when done.
 
 Call `list_tasks()` to verify progress and find the next pending task.
 
-## Step 6: Write Output
+## Step 7: Write Output
 
 Call `list_tasks()` to confirm the next pending task.
 
@@ -99,7 +115,7 @@ to the same path with `.title` appended (e.g., if output is `report.md`, write t
 
 Call `mark_task_complete(3)` when done.
 
-## Step 7: Confirm
+## Step 8: Confirm
 
 Call `list_tasks()` to confirm all tasks are complete.
 Report completion to the user. Do NOT call any more tools.

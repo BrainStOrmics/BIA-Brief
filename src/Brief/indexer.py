@@ -194,9 +194,10 @@ def _generate_overview(
     system_prompt = (
         "You are a senior bioinformatics analyst. Based on the research background, "
         "analysis scripts, and output figures provided, write a concise project overview "
-        "in markdown format. Include: the research goal, analytical methods used, "
+        "as plain text paragraphs. Include: the research goal, analytical methods used, "
         "and a brief summary of what the figures show. Do NOT repeat all details — "
-        "synthesize into a high-level narrative. Output markdown only, no code fences."
+        "synthesize into a high-level narrative. "
+        "Output plain text only — NO headings, NO code fences, NO titles."
     )
 
     human_content = (
@@ -212,7 +213,12 @@ def _generate_overview(
 
     try:
         response = chat_model.invoke(message)
-        return response.content if hasattr(response, "content") else str(response)
+        text = response.content if hasattr(response, "content") else str(response)
+        # Strip any leading heading lines (# or ##) that the LLM may add
+        lines = text.split("\n")
+        while lines and lines[0].strip().startswith("#"):
+            lines.pop(0)
+        return "\n".join(lines).strip()
     except Exception as e:
         logger.warning("Failed to generate project overview: %s", e)
         return ""

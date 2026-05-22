@@ -38,7 +38,7 @@ A4_WIDTH_MM = 210.0
 BOTTOM_MARGIN_MM = 30.0
 FOOTER_SAFE_SPACE_MM = 42.0
 MM_TO_PX = 96.0 / 25.4
-PAGE_CONTENT_HEIGHT_PX = (A4_HEIGHT_MM - 25.4 * 2) * MM_TO_PX
+PAGE_CONTENT_HEIGHT_PX = (A4_HEIGHT_MM - 15.0 - 30.0) * MM_TO_PX
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 PROJECT_ROOT = REPO_ROOT.parent.parent
@@ -204,14 +204,10 @@ def _build_cover_html_document(body_html: str, background_image_uri: str, title:
             display: block;
         }}
         .cover-wrapper p {{
-            position: absolute;
-            bottom: 12mm;
-            left: 0;
-            width: 100%;
             text-align: center;
             font-size: 10pt;
             color: gray;
-            margin: 0;
+            margin: 4mm 0 0;
         }}
     </style>
 </head>
@@ -233,7 +229,7 @@ def _build_body_html_document(body_html: str, background_image_uri: str, title: 
     <style>
         @page {{
             size: A4;
-            margin: 1in 16mm;
+            margin: 15mm 16mm 30mm 16mm;
         }}
         html, body {{
             width: 100%;
@@ -469,7 +465,6 @@ def _build_body_html_document(body_html: str, background_image_uri: str, title: 
             font-weight: 700;
             margin: 24pt 0 6pt;
             color: #1f2d3d;
-            page-break-after: avoid;
         }}
         h3 {{
             font-size: 12pt;
@@ -492,6 +487,15 @@ def _build_body_html_document(body_html: str, background_image_uri: str, title: 
         }}
         .content p, .content table {{
             page-break-inside: avoid;
+        }}
+        div[style*="page-break-after"] {{
+            height: 0;
+            margin: 0;
+            padding: 0;
+            break-after: page;
+        }}
+        div[style*="page-break-after"] + * {{
+            margin-top: 0;
         }}
     </style>
 </head>
@@ -652,9 +656,9 @@ def _render_html_to_pdf(html_path: Path, output_pdf: Path, show_page_numbers: bo
                 else "<span></span>"
             ),
             margin={
-                "top": "1in",
+                "top": "15mm",
                 "right": "16mm",
-                "bottom": "1in",
+                "bottom": "30mm",
                 "left": "16mm",
             },
         )

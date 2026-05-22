@@ -2,6 +2,9 @@
 
 from .file_ops import read_file, write_file
 from .task_ops import create_task_tools
+from .outline_review import create_outline_review_tool
+
+__all__ = ["create_tools", "create_outline_review_tool", "read_file", "write_file"]
 
 
 def create_tools() -> list:

@@ -6,16 +6,20 @@ Architecture: Indexer → ReAct Agent → Post-process → PDF
 from __future__ import annotations
 
 import logging
-import os
+import uuid
 from pathlib import Path
 from typing import Any, Optional, Type
 
 from langchain_core.language_models import LanguageModelLike
+from langchain_core.messages import AIMessage, ToolMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Checkpointer, Command
+from langgraph.store.base import BaseStore
 
 from .config.config import brief_config
-from .indexer import index_project
 from .agent import create_brief_agent, load_agent_prompt
-from .tools import create_tools
+from .tools import create_tools, create_outline_review_tool
+from .tools.indexer_tool import create_indexer_tool
 from .utils.postprocess import (
     build_template_fields,
     embed_figures_in_body,
@@ -29,10 +33,6 @@ try:
 except Exception:
     Image = None
     display = None
-
-from langchain_core.messages import AIMessage, ToolMessage
-from langgraph.types import Checkpointer
-from langgraph.store.base import BaseStore
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,75 @@ class AgentStepPrinter:
         preview = text[:120].replace("\n", " ")
         suffix = "..." if len(text) > 120 else ""
         print(f"  {_GREEN}→ AI:{_RESET} {_GRAY}{preview}{suffix}{_RESET}", flush=True)
+
+
+def _wait_for_human_review(prompt_msg: str, timeout: int = 300) -> str:
+    """Print prompt, wait for user input with timeout.
+
+    Args:
+        prompt_msg: Message to display (from interrupt metadata).
+        timeout: Seconds to wait before auto-resume.
+
+    Returns:
+        User feedback string. Timeout returns auto-resume message,
+        EOFError returns approval message.
+    """
+    import signal
+
+    def _timeout_handler(signum: int, frame: Any) -> None:
+        raise TimeoutError("Human review timed out")
+
+    print(f"\n{_GREEN}{'='*60}{_RESET}")
+    print(f"{_GREEN}{prompt_msg}{_RESET}")
+    print(f"{_YELLOW}编辑后按 Enter 继续...（{timeout}s 超时）{_RESET}")
+    print(f"{_GREEN}{'='*60}{_RESET}")
+
+    signal.signal(signal.SIGALRM, _timeout_handler)
+    signal.alarm(timeout)
+    try:
+        return input()
+    except TimeoutError:
+        logger.info("Human review timed out, auto-resuming")
+        return "审阅超时自动继续（未编辑）"
+    except EOFError:
+        return "审阅通过"
+    finally:
+        signal.alarm(0)
+
+
+def _stream_and_print(
+    agent,
+    stream_input: Any,
+    config: dict,
+    printer: AgentStepPrinter,
+) -> None:
+    """Stream agent events and print tool calls/results/AI text."""
+    pending_tool_calls: dict[str, str] = {}
+
+    for event in agent.stream(stream_input, config=config, stream_mode="updates"):
+        if not isinstance(event, dict):
+            continue
+        for node_name, node_data in event.items():
+            if not isinstance(node_data, dict):
+                continue
+            messages = node_data.get("messages", [])
+            if node_name == "model":
+                for msg in messages:
+                    if not isinstance(msg, AIMessage):
+                        continue
+                    for tc in msg.tool_calls or []:
+                        tool_id = tc.get("id", tc.get("tool_call_id", ""))
+                        pending_tool_calls[tool_id] = tc["name"]
+                        printer.handle_tool_call(tc["name"], tc.get("args", {}))
+                    if not msg.tool_calls and msg.content:
+                        printer.handle_ai_text(msg.content)
+            elif node_name == "tools":
+                for msg in messages:
+                    if not isinstance(msg, ToolMessage):
+                        continue
+                    tool_id = msg.tool_call_id
+                    tool_name = pending_tool_calls.pop(tool_id, "unknown")
+                    printer.handle_tool_result(tool_name, msg.content)
 
 
 class Brief:
@@ -129,80 +198,66 @@ class Brief:
 
         # Resolve output path
         output_path = str(Path(project_path) / output_dir / "report.md")
+        index_path = str(Path(project_path) / "index.md")
 
-        # Step 1: Indexer (scan + parallel caption/summary → write index.md)
-        logger.info("Step 1: Indexing project...")
-        index_path = index_project(
-            project_path=project_path,
-            mmchat_model=self.mmchat_model,
-            background=background,
-            output_lang=output_lang,
-            max_retry=self.max_retry,
-            output_path=output_path,
-            chat_model=self.chat_model,
-        )
-        logger.info("Index written to: %s", index_path)
+        # Create tools: indexer + outline review + standard tools
+        indexer_tool = create_indexer_tool(self.chat_model, self.mmchat_model)
+        outline_review_tool = create_outline_review_tool()
+        tools = [indexer_tool, outline_review_tool] + create_tools()
 
-        # Step 2: Create agent
-        logger.info("Step 2: Creating ReAct agent...")
-        prompts_dir = Path(__file__).parent / "prompts"
-        thesis_guide_path = str(prompts_dir / "thesis.md")
-        report_guide_path = str(prompts_dir / "report.md")
-
-        tools = create_tools()
+        # Create agent with HITL (interrupt triggered inside run_indexer tool)
+        logger.info("Creating ReAct agent with HITL interrupt...")
+        checkpointer = self.checkpointer or MemorySaver()
         agent = create_brief_agent(
             chat_model=self.chat_model,
             system_prompt=load_agent_prompt(),
             tools=tools,
-            checkpointer=self.checkpointer,
+            checkpointer=checkpointer,
             store=self.store,
         )
 
-        # Step 3: Invoke agent with streaming visualization
+        # Build user message (agent will extract params and call run_indexer)
+        thesis_guide_path = str(Path(__file__).resolve().parent / "prompts" / "thesis.md")
         user_msg = (
             f"Generate a bioinformatics report.\n\n"
-            f"Project index path: {index_path}\n"
-            f"Thesis guide path: {thesis_guide_path}\n"
-            f"Report guide path: {report_guide_path}\n"
-            f"Project path: {project_path}\n"
             f"Background: {background}\n"
             f"Output language: {output_lang}\n"
             f"Output path: {output_path}\n"
+            f"Project path: {project_path}\n"
+            f"Thesis guide path: {thesis_guide_path}\n"
         )
 
-        # Step 3: Stream agent execution with terminal visualization
-        logger.info("Step 3: Invoking ReAct agent...")
+        config = {"configurable": {"thread_id": f"brief-{uuid.uuid4().hex[:8]}"}}
         printer = AgentStepPrinter()
-        pending_tool_calls: dict[str, str] = {}  # tool_id -> tool_name
 
-        for event in agent.stream(
+        # Step A: Run agent until interrupt (after run_indexer completes)
+        logger.info("Step A: Running indexer...")
+        _stream_and_print(
+            agent,
             {"messages": [{"role": "user", "content": user_msg}]},
-            stream_mode="updates",
-        ):
-            # event is a dict like {'model': {'messages': [...]}} or {'tools': {'messages': [...]}}
-            for node_name, node_data in event.items():
-                messages = node_data.get("messages", [])
+            config,
+            printer,
+        )
 
-                if node_name == "model":
-                    for msg in messages:
-                        if not isinstance(msg, AIMessage):
-                            continue
-                        # Handle tool calls from AI
-                        for tc in msg.tool_calls or []:
-                            tool_id = tc.get("id", tc.get("tool_call_id", ""))
-                            pending_tool_calls[tool_id] = tc["name"]
-                            printer.handle_tool_call(tc["name"], tc.get("args", {}))
-                        # Handle plain text from AI
-                        if not msg.tool_calls and msg.content:
-                            printer.handle_ai_text(msg.content)
+        # Step B: Human-in-the-Loop loop — handle all interrupts (indexer, outline, ...)
+        logger.info("Step B: Entering HITL interrupt loop...")
+        while True:
+            state = agent.get_state(config)
+            if not state.interrupts:
+                break
 
-                elif node_name == "tools":
-                    for msg in messages:
-                        if not isinstance(msg, ToolMessage):
-                            continue
-                        tool_id = msg.tool_call_id
-                        tool_name = pending_tool_calls.pop(tool_id, "unknown")
-                        printer.handle_tool_result(tool_name, msg.content)
+            for iv in state.interrupts:
+                data = iv.value
+                msg = data.get("message", "审阅完成，请继续。")
+                user_feedback = _wait_for_human_review(msg, timeout=300)
+
+            logger.info("Step C: Resuming agent with feedback...")
+            _stream_and_print(
+                agent,
+                Command(resume=user_feedback),
+                config,
+                printer,
+            )
 
         logger.info("Agent completed.")
 

@@ -1,23 +1,14 @@
 <!--
   cache_key: 1638c1e9c055f4a9
   source_mtime: 1777345182.9810617
-  generated_at: 2026-05-21T14:08:33
+  generated_at: 2026-05-21T16:49:10
 -->
 
 # Project Index
 
 ## Project Overview
 
-# Single-Cell Transcriptomic Profiling and Trajectory Inference
-
-**Research Goal**  
-This project aims to resolve cellular heterogeneity, define transcriptionally distinct cell populations, and reconstruct developmental trajectories from single-cell RNA sequencing (scRNA-seq) data. By mapping molecular states and lineage relationships, the analysis seeks to uncover the regulatory programs driving cell identity specification and dynamic state transitions within the sampled tissue.
-
-**Analytical Methods**  
-The workflow follows a standardized Scanpy-based scRNA-seq pipeline. Initial processing applies stringent quality control to remove low-quality cells and ambient RNA, followed by library size normalization and highly variable gene (HVG) selection to capture biologically relevant transcriptional variation. Dimensionality reduction via PCA and UMAP enables graph-based Leiden clustering to partition cells into coherent subpopulations. Cluster identities are resolved through differential expression analysis for robust marker discovery, while PAGA (Partition-based Graph Abstraction) is employed to infer pseudotemporal ordering and model lineage bifurcations across the cellular landscape.
-
-**Figure Summary**  
-The accompanying visualizations systematically document the analytical progression and highlight key biological insights. Initial QC plots (`violin_1_qc.png`, `scatter_2_qc.png`) confirm successful filtering of technical artifacts, while HVG dispersion and PCA variance plots (`filter_genes_dispersion_3_hvg.png`, `pca_variance_ratio_4_variance.png`) validate feature selection and optimal embedding dimensionality. The UMAP projection (`umap_5_leiden.png`) demonstrates clear cluster separation, which is biologically substantiated by ranked marker gene profiles (`rank_genes_groups_leiden_7_ranking.png`) and spatial expression overlays (`umap_8_markers.png`). Finally, the PAGA graph (`paga_9.png`) maps the inferred developmental continuum, revealing critical branching points and transitional states that govern cellular differentiation. Together, these outputs provide a high-resolution, trajectory-aware characterization of the tissue's cellular architecture.
+This single-cell transcriptomic analysis applied a standard Scanpy workflow to dissect cellular heterogeneity and developmental relationships. After stringent quality control filtering of genes and cells, counts were normalized and highly variable genes were identified based on dispersion. Dimensionality reduction via principal component analysis captured the major transcriptional variance, and the neighborhood graph was visualized using UMAP. Unsupervised Leiden clustering resolved transcriptionally distinct cell groups, whose discriminating marker genes were ranked by differential expression and projected onto the UMAP embedding. Finally, trajectory inference through PAGA reconstructed a graph of connectivity between clusters, highlighting potential differentiation lineages and transitional states. The output figures confirm effective data cleaning and subsetting, clear separation of Leiden clusters on UMAP, robust marker gene specificity across populations, and a structured developmental continuum with branching inferred from the PAGA topology.
 
 ## Images
 
@@ -40,50 +31,50 @@ The accompanying visualizations systematically document the analytical progressi
 
 ## Figure Captions
 
-### Figure 1: 图 0. 单细胞转录组高变基因筛选散点图。
+### Figure 1: 图 0. 单细胞转录组高变基因筛选分布图。
 
-左图：X 轴表示基因平均表达量，Y 轴表示标准化离散度；右图：X 轴表示基因平均表达量，Y 轴表示未标准化离散度。
+左图 X 轴表示基因平均表达量，Y 轴表示标准化后的基因离散度；右图 X 轴表示基因平均表达量，Y 轴表示未标准化的基因离散度。
 
-**Section Summary:** 本研究采用基于离散度的方法筛选高变基因，通过将基因按平均表达量分箱后计算标准化方差，以有效区分真实的生物学变异与测序技术噪声。分析共筛选出 2000 个高变基因，散点图中位于左上区域的基因表现出高离散度与低平均表达量的特征，通常对应于在特定细胞亚群中特异性高表达的调控因子或表面标志物。该筛选策略成功剔除了大量低信息量的持家基因与技术噪音，显著提升了数据信噪比。由此保留的高变基因集将作为核心特征输入后续的 PCA 降维与 Leiden 聚类算法，为精准解析细胞异质性、识别稀有细胞类型及推断发育轨迹奠定坚实的分子基础。
+**Section Summary:** 本研究采用 Scanpy 内置的高变基因筛选算法，通过将基因按平均表达量分箱并计算标准化离散度，有效区分生物学变异与技术噪声，最终筛选出 2000 个高变基因用于下游分析。散点图显示，被标记为高变基因的位点在低至中等表达区间呈现出显著高于背景噪声的离散度，而绝大多数基因的离散度随表达量升高而趋于平稳。该筛选策略精准捕获了驱动细胞异质性的关键转录特征，去除了大量低信息量的管家基因与技术噪音，为后续 PCA 降维、Leiden 聚类及细胞发育轨迹推断奠定了可靠的分子基础，确保细胞亚群划分与状态转换分析的特异性与准确性。
 
 ### Figure 2: 图 1. 基于 PAGA 算法的单细胞发育轨迹推断网络图。
 
-图形采用无坐标轴的网络拓扑布局，节点与连线按力导向算法自动排布。
+无坐标轴，展示基于 Leiden 聚类的细胞状态拓扑网络布局。
 
-**Section Summary:** 本研究采用 PAGA（Partition-based Graph Abstraction）算法对 Leiden 聚类结果（分辨率设为 0.3，共划分 16 个细胞亚群）进行拓扑结构建模，旨在克服传统降维方法在连续发育过程中可能造成的流形断裂问题。图中节点代表独立的细胞聚类，连线粗细直观反映了基于单细胞转录组相似性计算出的状态转换概率，其中节点 0、2、13 等通过粗连线形成主干分支，提示存在明确的细胞分化主轴。该轨迹网络有效揭示了细胞群体从初始状态向终末分化状态的连续演变路径，为后续拟时序分析及关键调控基因的动态表达研究提供了可靠的拓扑学框架。
+**Section Summary:** 本研究采用 PAGA（Partition-based Graph Abstraction）算法构建细胞状态转换的拓扑网络，该方法通过将 Leiden 聚类结果抽象为图节点，有效克服了传统降维方法在刻画连续分化过程时的离散化局限，特别适用于解析具有多分支命运的发育轨迹。网络图共包含 16 个聚类簇（编号 0-15），节点大小反映各簇细胞丰度，连线粗细表征簇间转录组相似性与转换概率；其中簇 0 作为核心枢纽与多个下游簇（如 2、5、13）相连，而簇 1、6、7、8、9 等形成紧密连接的子网络，提示存在高度相关的细胞亚群或过渡态。该拓扑结构清晰揭示了细胞群体从初始状态向特定谱系分化的潜在路径与分支节点，为后续拟时序分析、关键调控基因鉴定及细胞命运决定机制的深入解析提供了可靠的拓扑学框架。
 
-### Figure 3: 图 2. 主成分分析（PCA）方差贡献率分布图。
+### Figure 3: 图 2. 单细胞转录组 PCA 主成分方差贡献率分布图。
 
-X 轴表示主成分排序，Y 轴表示对数尺度下的方差贡献率。
+X 轴表示主成分排序（ranking），Y 轴表示对数刻度下的方差贡献率（variance ratio）。
 
-**Section Summary:** 本研究采用主成分分析（PCA）对高变基因表达矩阵进行降维，通过对数坐标展示各主成分的方差贡献率，以评估数据降维的有效性并确定后续分析的最佳维度。图中曲线呈现典型的“肘部”衰减趋势，前5个主成分（PC1-PC5）的方差贡献率显著高于后续成分，表明核心生物学变异高度集中于低维空间。该分布特征验证了单细胞转录组数据中存在明确的低维流形结构，前序主成分有效捕获了细胞亚群异质性与发育状态转换的关键信号。基于此方差衰减规律，分析流程选取前40个主成分构建细胞邻接图，在保留主要生物学差异的同时有效过滤了技术噪声，为后续Leiden聚类和PAGA轨迹推断奠定了稳健的数学基础。
+**Section Summary:** 本研究采用主成分分析（PCA）对高变基因表达矩阵进行降维，通过对数刻度展示前50个主成分的方差贡献率，以评估数据内在结构并确定后续分析的有效维度。图中显示前5个主成分（PC1至PC5）的方差贡献率显著高于后续成分，呈现典型的陡峭下降趋势，表明细胞间的主要转录异质性高度集中于少数正交维度；随着排序增加，方差贡献率逐渐趋于平缓，提示后续主成分主要捕获技术噪声或微弱生物学信号。该分布特征验证了降维策略的合理性，表明保留前10至20个主成分即可充分表征核心生物学变异。此低维特征空间为后续构建细胞邻接网络、执行Leiden聚类及PAGA发育轨迹推断奠定了稳健的数学基础，确保下游分析能够精准解析细胞亚群划分与状态转换机制。
 
-### Figure 4: 图 3. 各 Leiden 聚类簇（Cluster 0-15）的差异表达基因（Marker Genes）排名图。
+### Figure 4: 图 3. 单细胞聚类簇 Marker 基因排名图，展示 Cluster 0-15 的特异性高表达基因。
 
-包含 16 个子图，分别对应 Cluster 0 至 15。X 轴表示基因排名，Y 轴表示差异表达评分（score）。
+包含 16 个子图，分别对应 Cluster 0 至 15 与其余细胞的对比；X 轴表示基因排名，Y 轴表示差异表达得分。
 
-**Section Summary:** 本研究利用 Wilcoxon 秩和检验对 Leiden 聚类产生的 16 个细胞亚群进行差异表达分析，旨在鉴定各簇的特异性 Marker 基因。结果显示，每个亚群均具有独特的基因表达特征，例如 Cluster 0 显著富集 *Ghr* 和 *Sorbs1*，Cluster 3 高表达 *Dcn* 和 *Col1a2*（提示成纤维细胞或基质细胞特征），而 Cluster 1 则高表达 *Fl3a1* 等基因。各簇 Marker 基因的评分（Score）差异显著，部分簇（如 Cluster 3）的最高评分超过 350，表明其细胞群体具有高度均一且特异的转录组特征。这些 Marker 基因的鉴定为后续的细胞类型注释提供了关键依据，有助于解析样本中的细胞组成异质性及其潜在的生物学功能。
+**Section Summary:** 本研究采用 Wilcoxon 秩和检验 (`sc.tl.rank_genes_groups`) 对 Leiden 聚类结果进行 Marker 基因鉴定，旨在寻找每个细胞亚群的特异性标志物。图中展示了 Cluster 0 至 15 共 16 个亚群的差异基因排名情况，X 轴为基因排名，Y 轴为统计得分（score），得分越高表明该基因在对应簇中的表达特异性越强。例如，Cluster 0 高表达 *Ghr* 和 *Sorbs1*，Cluster 1 高表达 *Fl3a1* 和 *Selenop*，Cluster 3 高表达 *Dcn* 和 *Fst1*。这些高得分基因不仅验证了聚类的有效性，区分了不同的细胞群体，也为后续基于已知 Marker 数据库进行细胞类型注释提供了关键的分子依据，揭示了样本中复杂的细胞异质性。
 
-### Figure 5: 图 4. 单细胞转录组数据质控散点图，展示总读数、检出基因数与线粒体基因比例的关系。
+### Figure 5: 图 4. 单细胞转录组数据质控散点图，展示测序深度、检测基因数与线粒体基因比例的关系。
 
-X 轴表示总读数（total_counts），Y 轴表示检出基因数（n_genes_by_counts）。
+X 轴表示总测序读数（total_counts），Y 轴表示检测到的基因数（n_genes_by_counts）。
 
-**Section Summary:** 本研究采用 Scanpy 流程对单细胞转录组数据进行严格质控，通过散点图同步可视化总 UMI 计数、检出基因数与线粒体基因占比，旨在区分高质量完整细胞与低质量或破损细胞。图中细胞群体主要沿对角线分布，线粒体基因比例在低总读数区域显著升高，而高读数区域线粒体比例普遍维持在较低水平。结合预设的过滤阈值（线粒体比例 < 5% 且基因数 < 2500），该步骤有效剔除了因细胞膜破裂或凋亡导致线粒体 RNA 异常泄漏的异常细胞。此质控策略显著降低了技术噪音对下游分析的干扰，确保后续 PCA 降维、Leiden 聚类及 PAGA 轨迹推断能够精准捕捉真实的细胞亚群异质性与发育分化信号。
+**Section Summary:** 本研究采用 Scanpy 流程对单细胞转录组数据进行严格质控，通过计算每个细胞的总 UMI 数、检测基因数及线粒体基因占比，评估细胞完整性与测序质量。该步骤旨在识别并剔除因细胞破裂或低质量捕获导致的高线粒体污染细胞，确保下游分析基于高质量转录组数据。散点图显示细胞群体沿对角线分布，表明总读数与检测基因数呈正相关；颜色梯度反映线粒体基因比例变化，绝大多数细胞线粒体占比集中在 0-5% 区间，符合预设过滤阈值。线粒体基因异常高表达通常提示细胞膜破损或处于凋亡应激状态，严格质控可有效排除技术噪音与死亡细胞干扰。保留的高质量细胞群为后续高变基因筛选、降维聚类及发育轨迹推断奠定了可靠的数据基础，保障了细胞亚群划分与生物学结论的准确性。
 
 ### Figure 6: 图 5. 基于 Leiden 算法的单细胞 UMAP 聚类分布图。
 
-X 轴表示 UMAP1，Y 轴表示 UMAP2。
+X 轴表示 UMAP1 坐标，Y 轴表示 UMAP2 坐标。
 
-**Section Summary:** 本研究基于 PCA 降维后的前 40 个主成分，采用 Leiden 算法（分辨率参数设为 0.3）对单细胞转录组数据进行无监督聚类，并通过 UMAP 进行二维可视化以保留细胞间的全局与局部拓扑结构。结果显示共鉴定出 16 个转录组特征各异的细胞亚群（Cluster 0-15），各群体在降维空间中呈现清晰的边界与良好的空间分离度，表明样本内存在显著的细胞异质性。这种明确的聚类结构有效反映了不同细胞类型或发育状态的转录差异，为后续特异性 Marker 基因的筛选提供了可靠的群体划分依据。同时，清晰的亚群分布也为 PAGA 轨迹推断奠定了拓扑基础，有助于进一步解析细胞分化路径与状态转换的动态过程。
+**Section Summary:** 本研究基于 PCA 降维后的前 40 个主成分，采用 Leiden 算法（分辨率参数设为 0.3）对单细胞转录组数据进行无监督聚类，并通过 UMAP 进行二维可视化以保留细胞间的局部与全局拓扑结构。结果显示共鉴定出 16 个转录组特征各异的细胞亚群（Cluster 0-15），各群体在降维空间中呈现清晰的边界与良好的分离度，部分边缘簇的弥散分布提示可能存在过渡态或稀有细胞类型。该聚类结果有效揭示了样本内高度的细胞异质性，为后续差异表达分析提供了可靠的群体划分依据。明确的亚群结构不仅有助于精准鉴定各细胞类型的特异性标志物，也为 PAGA 轨迹推断奠定了拓扑基础，从而能够系统解析细胞分化路径与发育状态转换的动态过程。
 
-### Figure 7: 图 6. 单细胞 UMAP 聚类分布及关键 Marker 基因表达模式图。
+### Figure 7: 图 6. 单细胞 UMAP 聚类及各亚群 Top1 Marker 基因表达分布图。
 
-X 轴表示 UMAP1，Y 轴表示 UMAP2。上排 16 个子图分别展示不同 Marker 基因；底部子图展示 Leiden 聚类结果。
+上排至下排展示各基因表达分布，左下角展示 Leiden 聚类分组。
 
-**Section Summary:** 本研究利用 Scanpy 流程对单细胞数据进行降维聚类，并通过 Wilcoxon 秩和检验鉴定各 Leiden 亚群（Resolution=0.3）的特异性 Marker 基因。UMAP 可视化结果显示，数据被清晰划分为 16 个独立的细胞簇（Cluster 0-15），且不同簇之间具有明显的空间界限。基因表达图谱揭示了高度的细胞异质性：例如，*Ghr*、*F13a1* 和 *Ctcfls* 在特定簇（如 Cluster 0）中呈现高丰度特异性表达，提示该群体可能具有特定的内分泌或结构功能；而 *Actb* 作为管家基因在各群中广泛表达。此外，*Ighm* 和 *Lyz2* 的局灶性高表达暗示了免疫细胞（如 B 细胞或巨噬细胞）的存在。这些 Marker 基因的特异性分布不仅验证了聚类结果的生物学合理性，也为后续解析细胞发育轨迹和功能状态提供了关键的分子标签。
+**Section Summary:** 本研究基于 Scanpy 流程对单细胞转录组数据执行 Leiden 聚类（分辨率设为 0.3），共划分出 16 个细胞亚群，并采用 Wilcoxon 秩和检验提取各群组的 Top1 差异基因进行 UMAP 空间映射。可视化结果显示，Ghr、F13a1、Lyz2 及 Actb 等标志物在特定聚类区域内呈现高度局域化富集，表达梯度清晰揭示了转录活性的空间异质性，有效验证了降维聚类算法在解析细胞群体结构上的可靠性。这些特异性基因广泛参与代谢调控、先天免疫应答及细胞骨架维持等核心生理过程，表明样本内存在功能高度特化的细胞亚型。该分子特征图谱不仅为细胞类型的精准注释提供了关键依据，也为后续推断细胞分化轨迹及挖掘微环境互作机制奠定了坚实基础。
 
-### Figure 8: 图 7. 单细胞转录组数据质控（QC）指标分布小提琴图。
+### Figure 8: 图 7. 单细胞转录组数据质控指标分布图。
 
-左、中、右三图分别展示每个细胞的检测基因数、总测序读数及线粒体基因占比，Y 轴表示对应指标的数值。
+左至右依次展示每个细胞检测到的基因数、总读数及线粒体基因表达占比，Y 轴均表示对应指标的数值。
 
-**Section Summary:** 本研究采用 Scanpy 流程对原始单细胞数据进行质控，通过计算每个细胞的检测基因数、总 UMI 计数及线粒体基因占比评估数据质量，旨在剔除裂解细胞、双细胞及高线粒体含量的凋亡细胞。小提琴图显示，绝大多数细胞的基因数集中在 500 至 2500 之间，总读数呈典型右偏分布，而线粒体基因占比主要聚集在 5% 以下，仅极少数细胞呈现异常高值。基于该分布特征，流程设定了严格过滤阈值（MT < 5%，Genes < 2500），有效去除了技术噪音与低活性细胞。高质量的细胞子集显著降低了技术异质性对后续降维聚类的干扰，为高变基因筛选、Leiden 聚类及 PAGA 轨迹推断奠定了可靠基础，确保下游鉴定的细胞亚群与发育状态转换真实反映生物学差异。
+**Section Summary:** 本研究在单细胞分析流程初期采用小提琴图对 n_genes_by_counts、total_counts 和 pct_counts_mt 三项核心质控指标进行可视化评估，旨在区分高质量细胞与双细胞、空液滴或应激凋亡细胞。图中显示大多数细胞的基因检出数与总读数呈集中分布，而线粒体基因占比普遍低于 5%，仅少数细胞呈现异常高值。基于此分布特征，流程设定了线粒体占比小于 5% 且基因数小于 2500 的过滤阈值，有效剔除了技术噪音与低活性细胞。该质控步骤显著提升了数据集的信噪比，确保后续降维聚类与轨迹推断能够聚焦于真实的生物学异质性，为精准解析细胞亚群发育状态奠定可靠的数据基础。
