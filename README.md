@@ -7,13 +7,13 @@ Optimized for single-cell / single-nucleus transcriptomics projects, but adaptab
 ## Architecture
 
 ```text
-Indexer → ReAct Agent → Post-process → PDF
+Indexer → ReAct Agent (w/ HITL interrupts) → Post-process → PDF
 ```
 
 | Step | Model | Responsibility |
 |------|-------|----------------|
 | **Indexer** | Multimodal (vision) | Scans `pics/` and `scripts/`, generates figure captions and section summaries in parallel |
-| **ReAct Agent** | Text (reasoning) | Reads index, follows guides, assembles full report with embedded figures |
+| **ReAct Agent** | Text (reasoning) | Reads index, follows guides, assembles full report — with HITL interrupts for human review |
 | **Post-process** | — (deterministic) | Paragraph wrapping, figure renumbering (fallback), template rendering |
 | **PDF export** | — (Playwright) | Converts rendered Markdown to PDF with cover page, TOC, and page numbers |
 
@@ -30,6 +30,8 @@ src/Brief/
     config.yaml.example #   Template config
   tools/               # Generic tools available to the ReAct agent
     file_ops.py        #   read_file, write_file
+    indexer_tool.py    #   run_indexer — calls index_project, triggers HITL interrupt
+    outline_review.py  #   review_outline — triggers HITL interrupt for outline approval
     task_ops.py        #   create_task_list, mark_task_complete
   prompts/             # LLM prompt templates (English only)
     agent.md           #   Agent role and workflow steps
@@ -40,6 +42,7 @@ src/Brief/
     filemanager.py     #   Image/script discovery under project path
     io.py              #   File I/O utilities
     md_to_pdf.py       #   Markdown-to-PDF converter (Playwright)
+    md_to_latex.py     #   Markdown-to-LaTeX converter (stdlib only)
     parse_md_template.py  # Template placeholder substitution engine
     postprocess.py     #   Figure embedding, renumbering, paragraph wrapping
     setup.py           #   System initialization
@@ -125,9 +128,7 @@ The `PROJECT_PATH` is treated as the project root and is expected to contain:
 
 ```text
 your_project/
-  pics/               # Required — contains analysis figures
-    figure_1.png
-    figure_2.png
+  pics/               # Required — contains 
   scripts/            # Optional — analysis script (first found is used)
     scanpy_ppl.py
 ```
@@ -145,6 +146,7 @@ python local_tests/generate_caption_test.py
 Outputs are written to `local_tests/output/`:
 - `report.md` — generated Markdown report
 - `report.pdf` — PDF export
+- `report.tex` — LaTeX export (compile with `xelatex report.tex`)
 - `*_result.json` — test summary with timing and status
 
 ## PDF Export
@@ -157,6 +159,23 @@ The PDF pipeline:
 3. Measures heading positions to update table of contents page numbers
 4. Renders body content (with page numbers) and overlays a background watermark
 5. Merges cover + TOC + body into a single PDF
+
+## LaTeX Export
+
+LaTeX conversion runs automatically alongside PDF export — the `.tex` file is created alongside the Markdown output (same path, `.tex` extension).
+
+To compile the LaTeX file to PDF:
+```bash
+xelatex report.tex   # run twice for TOC generation
+xelatex report.tex
+```
+
+The LaTeX pipeline:
+1. Converts cover HTML to `\begin{titlepage}` environment
+2. Uses LaTeX-native `\tableofcontents` (replaces HTML TOC block)
+3. Converts headings, figures, citations, references, lists, and tables to LaTeX
+4. Chinese text supported via `ctex` package
+5. No Python dependencies added — uses stdlib only
 
 ## Output
 

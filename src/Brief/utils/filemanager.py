@@ -39,7 +39,7 @@ def discover_project_files(project_path: str) -> dict[str, Any]:
     script_exts = {".py", ".r", ".R", ".ipynb", ".sh", ".jl", ".m"}
     script_dir = project_root / "scripts"
 
-    script_abs_dir = ""
+    script_abs_dirs: list[str] = []
     if not script_dir.exists() or not script_dir.is_dir():
         logger.info("No scripts directory found under %s, proceeding without script context.", project_root)
     else:
@@ -48,25 +48,18 @@ def discover_project_files(project_path: str) -> dict[str, Any]:
             for script_path in script_dir.rglob("*")
             if script_path.is_file() and script_path.suffix in script_exts
         )
-        if len(script_files) == 0:
+        script_abs_dirs = [str(sf.resolve()) for sf in script_files]
+        if len(script_abs_dirs) == 0:
             logger.info("No script files found in %s, proceeding without script context.", script_dir)
-        else:
-            script_abs_dir = str(script_files[0].resolve())
-            if len(script_files) > 1:
-                logger.warning(
-                    "Found %s script files in %s. Using the first one: %s",
-                    len(script_files),
-                    script_dir,
-                    script_abs_dir,
-                )
 
     logger.info(
-        "Discovered %s images and script context: %s",
+        "Discovered %s images and %s scripts: %s",
         len(pic_abs_dirs),
-        script_abs_dir if len(script_abs_dir) > 0 else "<none>",
+        len(script_abs_dirs),
+        ", ".join(Path(s).name for s in script_abs_dirs) if script_abs_dirs else "<none>",
     )
 
     return {
         "pic_abs_dirs": pic_abs_dirs,
-        "script_abs_dir": script_abs_dir,
+        "script_abs_dirs": script_abs_dirs,
     }

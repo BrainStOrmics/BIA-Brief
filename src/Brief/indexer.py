@@ -21,7 +21,6 @@ from .utils.io import (
     check_file_exists,
     check_image_exists,
     image_to_base64_for_llm,
-    read_code_file,
 )
 
 logger = logging.getLogger(__name__)
@@ -102,8 +101,8 @@ def _check_cache(index_path: Path, cache_key: str, source_mtime: float) -> bool:
         return False
 
 
-def _discover_project_files(project_path: Path) -> tuple[list[str], str]:
-    """Discover image and script files. Returns (pic_abs_dirs, script_abs_dir)."""
+def _discover_project_files(project_path: Path) -> tuple[list[str], list[str]]:
+    """Discover image and script files. Returns (pic_abs_dirs, script_abs_dirs)."""
     pic_dir = project_path / "pics"
     if not pic_dir.exists() or not pic_dir.is_dir():
         raise FileNotFoundError(f"Could not find picture directory: {pic_dir}")
@@ -120,25 +119,20 @@ def _discover_project_files(project_path: Path) -> tuple[list[str], str]:
         raise FileNotFoundError(f"No image files found in {pic_dir}")
 
     script_dir = project_path / "scripts"
-    script_abs_dir = ""
+    script_abs_dirs: list[str] = []
     if script_dir.exists() and script_dir.is_dir():
         script_files = sorted(
             p for p in script_dir.rglob("*")
             if p.is_file() and p.suffix in SCRIPT_EXTS
         )
-        if script_files:
-            script_abs_dir = str(script_files[0].resolve())
-            if len(script_files) > 1:
-                logger.warning(
-                    "Found %d script files. Using first: %s",
-                    len(script_files), script_abs_dir,
-                )
+        script_abs_dirs = [str(p.resolve()) for p in script_files]
 
     logger.info(
-        "Discovered %d images, script: %s",
-        len(pic_abs_dirs), script_abs_dir or "<none>",
+        "Discovered %d images, %d scripts: %s",
+        len(pic_abs_dirs), len(script_abs_dirs),
+        ", ".join(Path(s).name for s in script_abs_dirs) if script_abs_dirs else "<none>",
     )
-    return pic_abs_dirs, script_abs_dir
+    return pic_abs_dirs, script_abs_dirs
 
 
 def _get_image_dimensions(image_path: str) -> tuple[int, int]:
@@ -228,7 +222,7 @@ def _process_single_image(
     index: int,
     total: int,
     pic_abs_dir: str,
-    script_path: str,
+    script_paths: list[str],
     background: str,
     output_lang: str,
     mmchat_model: LanguageModelLike,
@@ -244,9 +238,12 @@ def _process_single_image(
 
         pic_64, pic_mime_type = image_to_base64_for_llm(pic_abs_dir)
 
-        script_content = ""
-        if script_path and check_file_exists(script_path):
-            script_content = read_code_file(script_path)
+        script_parts: list[str] = []
+        for sp in script_paths:
+            if sp and check_file_exists(sp):
+                _, line_count, summary = _get_script_summary(sp)
+                script_parts.append(f"### {Path(sp).name} ({line_count} lines)\n{summary}")
+        script_content = "\n\n".join(script_parts) if script_parts else ""
 
         prompt, _ = load_prompt_template("synthesist")
 
@@ -310,7 +307,7 @@ def _process_single_image(
 def _build_index_md(
     project_path: Path,
     pic_abs_dirs: list[str],
-    script_abs_dir: str,
+    script_abs_dirs: list[str],
     captions: list[dict[str, str]],
     cache_key: str,
     source_mtime: float,
@@ -362,14 +359,14 @@ def _build_index_md(
     lines.append("| # | File | Path | Language | Lines | Summary |")
     lines.append("|---|------|------|----------|-------|---------|")
 
-    if script_abs_dir:
-        p = Path(script_abs_dir)
-        report_dir = Path(output_path).parent if output_path else project_path
-        rel_path = os.path.relpath(p, start=report_dir).replace("\\", "/")
-        lang, line_count, summary = _get_script_summary(script_abs_dir)
-        # Escape pipe characters in summary
-        summary = summary.replace("|", "\\|").replace("\n", " ")
-        lines.append(f"| 1 | {p.name} | {rel_path} | {lang} | {line_count} | {summary} |")
+    if script_abs_dirs:
+        for i, script_path in enumerate(script_abs_dirs, start=1):
+            p = Path(script_path)
+            report_dir = Path(output_path).parent if output_path else project_path
+            rel_path = os.path.relpath(p, start=report_dir).replace("\\", "/")
+            lang, line_count, summary = _get_script_summary(script_path)
+            summary = summary.replace("|", "\\|").replace("\n", " ")
+            lines.append(f"| {i} | {p.name} | {rel_path} | {lang} | {line_count} | {summary} |")
     else:
         lines.append("| - | - | - | - | - | No scripts found |")
 
@@ -410,6 +407,10 @@ def index_project(
     if not project_root.exists() or not project_root.is_dir():
         raise FileNotFoundError(f"Project path does not exist: {project_root}")
 
+    # Defensive: if output_path is a directory or empty, default to report.md
+    if not output_path or Path(output_path).is_dir():
+        output_path = str(Path(output_path or project_root) / "report.md")
+
     index_path = project_root / "index.md"
     cache_key = _compute_cache_key(background, output_lang, output_path)
     source_mtime = _get_source_mtime(project_root)
@@ -420,15 +421,15 @@ def index_project(
         return str(index_path)
 
     # Discover files
-    pic_abs_dirs, script_abs_dir = _discover_project_files(project_root)
+    pic_abs_dirs, script_abs_dirs = _discover_project_files(project_root)
 
     # Generate project overview
     logger.info("Generating project overview...")
     pic_filenames = [Path(p).name for p in pic_abs_dirs]
     script_summaries: list[tuple[str, str, int, str]] = []
-    if script_abs_dir:
-        p = Path(script_abs_dir)
-        lang, lines_count, summary = _get_script_summary(script_abs_dir)
+    for sp in script_abs_dirs:
+        p = Path(sp)
+        lang, lines_count, summary = _get_script_summary(sp)
         script_summaries.append((str(p), lang, lines_count, summary))
 
     overview = _generate_overview(
@@ -449,7 +450,7 @@ def index_project(
                 index=i,
                 total=len(pic_abs_dirs),
                 pic_abs_dir=pic_path,
-                script_path=script_abs_dir,
+                script_paths=script_abs_dirs,
                 background=background,
                 output_lang=output_lang,
                 mmchat_model=mmchat_model,
@@ -467,7 +468,7 @@ def index_project(
     index_content = _build_index_md(
         project_path=project_root,
         pic_abs_dirs=pic_abs_dirs,
-        script_abs_dir=script_abs_dir,
+        script_abs_dirs=script_abs_dirs,
         captions=captions,
         cache_key=cache_key,
         source_mtime=source_mtime,

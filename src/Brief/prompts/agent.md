@@ -95,11 +95,42 @@ Call `list_tasks()` to confirm the next pending task.
 
 Call `read_file` on the report guide path provided by the user.
 Follow its instructions to assemble the complete report markdown.
-**You must follow the report outline you created in Step 5:**
-- Write sections in the order defined by the outline
-- Embed figures in the EXACT order and with the EXACT numbers from the outline
-- Do NOT use index.md figure numbers — use the outline numbers instead
-- The report must include the thesis content from Step 4.
+
+**MANDATORY CHECKLIST — verify each before writing:**
+
+1. **TOC format** — The report MUST start with this EXACT HTML structure for the table of contents:
+```html
+<section class='toc-block'>
+<h2 class='toc-title'>目录</h2>
+<div class='toc-line toc-level-0'>
+<span class='toc-item'>1 主标题</span>
+<span class='toc-dots' aria-hidden='true'></span>
+<span class='toc-page'>1</span>
+</div>
+<div class='toc-line toc-level-1'>
+<span class='toc-item'>1.1 子标题</span>
+<span class='toc-dots' aria-hidden='true'></span>
+<span class='toc-page'>1</span>
+</div>
+</section>
+```
+Use `toc-level-0` for `##` main sections, `toc-level-1` for `###` subsections. NO markdown lists, NO `<p>` tags inside TOC.
+
+2. **Page break** — After TOC, add `<div style='page-break-after: always;'></div>`
+
+3. NO `## 摘要` — start body directly with `## 1. [First section]`
+
+4. Each figure: `![图 X](path)` FIRST, then `<p align='center'><b>图 X</b> caption</p>`
+
+5. Captions ultra-concise (axis labels only) — analysis in body paragraphs
+
+6. NO subjective words: "成功", "显著", "successfully", "clearly"
+
+7. Add `<sup>[N]</sup>` citations in body, match with `[N]` in references
+
+8. Follow outline for figure order and numbering
+
+9. Include thesis content (discussion, conclusion, key takeaways)
 
 Call `mark_task_complete(2)` when done.
 

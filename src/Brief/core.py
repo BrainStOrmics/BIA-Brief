@@ -1,6 +1,6 @@
 """Brief: Main entry point for bioinformatics report generation.
 
-Architecture: Indexer → ReAct Agent → Post-process → PDF
+Architecture: Indexer → ReAct Agent → Post-process → PDF + LaTeX
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from .utils.postprocess import (
 )
 from .utils.parse_md_template import render_report_markdown
 from .utils.md_to_pdf import build_pdf_from_markdown
+from .utils.md_to_latex import build_latex_from_markdown
 
 try:
     from IPython.display import Image, display
@@ -316,9 +317,20 @@ class Brief:
             logger.exception("PDF conversion failed")
             pdf_path = ""
 
+        # Step 7: LaTeX export
+        logger.info("Step 7: Converting to LaTeX...")
+        tex_path = str(report_output_path.with_suffix(".tex"))
+        try:
+            build_latex_from_markdown(report_output_path, Path(tex_path))
+            logger.info("LaTeX generated: %s", tex_path)
+        except Exception:
+            logger.exception("LaTeX conversion failed")
+            tex_path = ""
+
         # Update report_dict
         report_dict["report_output_path"] = str(report_output_path)
         report_dict["report_pdf_path"] = pdf_path
+        report_dict["report_tex_path"] = tex_path
         report_dict["report_md"] = report_md
 
         logger.info("Report generation complete: %s", report_output_path)
