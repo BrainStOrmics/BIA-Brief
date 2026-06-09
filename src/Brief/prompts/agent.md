@@ -63,6 +63,17 @@ The outline defines the report structure and figure assignment:
 - Number figures sequentially from 1 across ALL sections (not per-section)
 - Every figure from the Images table MUST appear in exactly one section
 
+**REQUIRED sections (must appear in outline in this order, if corresponding figures exist):**
+1. 数据质量控制 — QC violin/scatter plots
+2. 数据标准化 — normalization discussion (can reuse QC figures)
+3. 高变基因选择和PCA降维 — with subsections: 高变特征筛选 + 主成分分析
+4. 单样本分析 — with subsections: 细胞聚类 + Marker基因鉴定
+5. 细胞类型注释 — annotation UMAP
+6. 拟时序分析 — PAGA/trajectory plots
+7. 差异基因表达GO和pathway功能分析 — enrichment plots (if applicable)
+
+Sections 3 and 4 MUST have `###` subsections. The TOC must use two levels (toc-level-0 + toc-level-1).
+
 Format example:
 ```
 # Report Outline
@@ -93,8 +104,11 @@ This tool pauses for human review. When it returns, the resume value contains th
 
 Call `list_tasks()` to confirm the next pending task.
 
-Call `read_file` on the report guide path provided by the user.
-Follow its instructions to assemble the complete report markdown.
+**CRITICAL: You MUST call `read_file` on the "Report guide path" provided by the user BEFORE writing the report.**
+This file contains mandatory formatting rules, required section structure, citation rules, and anti-patterns.
+Do NOT skip this step. Do NOT rely on memory — read the file every time.
+
+After reading the report guide, follow its instructions to assemble the complete report markdown.
 
 **MANDATORY CHECKLIST — verify each before writing:**
 

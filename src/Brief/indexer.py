@@ -101,8 +101,45 @@ def _check_cache(index_path: Path, cache_key: str, source_mtime: float) -> bool:
         return False
 
 
+# Mapping from filename patterns to (analysis_step, sort_order)
+# IMPORTANT: More specific patterns must come before general ones.
+# e.g., "rank_genes" before "leiden" (since rank_genes files may contain "leiden" in name),
+# and "leiden_search" before "leiden".
+ANALYSIS_STEP_MAP = {
+    "violin": ("数据质量控制", 1),
+    "scatter": ("数据质量控制", 2),
+    "qc": ("数据质量控制", 2),
+    "filter_genes": ("高变基因筛选", 3),
+    "hvg": ("高变基因筛选", 3),
+    "pca": ("PCA降维分析", 4),
+    "rank_genes": ("标记基因鉴定", 7),
+    "markers": ("标记基因鉴定", 8),
+    "leiden_search": ("细胞聚类分析", 5),
+    "leiden": ("细胞聚类分析", 6),
+    "Annotation": ("细胞类型注释", 9),
+    "annotation": ("细胞类型注释", 9),
+    "paga": ("细胞间通讯网络分析", 10),
+    "pseudotime": ("拟时序分析", 11),
+    "go_kegg": ("GO与Pathway功能分析", 12),
+    "enrichment": ("GO与Pathway功能分析", 12),
+}
+
+
+def _get_analysis_step(filename: str) -> tuple[str, int]:
+    """Determine analysis step and sort order from filename."""
+    name_lower = filename.lower()
+    for pattern, (step, order) in ANALYSIS_STEP_MAP.items():
+        if pattern.lower() in name_lower:
+            return step, order
+    return "其他分析", 99
+
+
 def _discover_project_files(project_path: Path) -> tuple[list[str], list[str]]:
-    """Discover image and script files. Returns (pic_abs_dirs, script_abs_dirs)."""
+    """Discover image and script files. Returns (pic_abs_dirs, script_abs_dirs).
+
+    Images are sorted by analysis workflow order (QC → HVG → PCA → Clustering →
+    Markers → Annotation → PAGA), not alphabetically.
+    """
     pic_dir = project_path / "pics"
     if not pic_dir.exists() or not pic_dir.is_dir():
         raise FileNotFoundError(f"Could not find picture directory: {pic_dir}")
@@ -110,11 +147,14 @@ def _discover_project_files(project_path: Path) -> tuple[list[str], list[str]]:
     figures_dir = pic_dir / "figures"
     pic_search_dir = figures_dir if figures_dir.exists() and figures_dir.is_dir() else pic_dir
 
-    pic_abs_dirs = sorted(
-        str(p.resolve())
-        for p in pic_search_dir.rglob("*")
+    all_pics = [
+        p for p in pic_search_dir.rglob("*")
         if p.is_file() and p.suffix.lower() in PIC_EXTS
-    )
+    ]
+    # Sort by analysis workflow order
+    all_pics.sort(key=lambda p: _get_analysis_step(p.name))
+    pic_abs_dirs = [str(p.resolve()) for p in all_pics]
+
     if not pic_abs_dirs:
         raise FileNotFoundError(f"No image files found in {pic_dir}")
 
@@ -153,8 +193,12 @@ def _get_file_size_str(path: str) -> str:
         return f"{size / (1024 * 1024):.1f}MB"
 
 
-def _get_script_summary(script_path: str, max_lines: int = 5) -> tuple[str, int, str]:
-    """Get script language, line count, and first N lines as summary."""
+def _get_script_summary(script_path: str, max_lines: int = 30) -> tuple[str, int, str]:
+    """Get script language, line count, and key analysis steps as summary.
+
+    Extracts import statements and key function calls (sc.tl.*, sc.pp.*, etc.)
+    to provide meaningful analysis context rather than just the first N lines.
+    """
     path = Path(script_path)
     lang = path.suffix.lstrip(".")
     if lang.lower() == "r":
@@ -164,10 +208,31 @@ def _get_script_summary(script_path: str, max_lines: int = 5) -> tuple[str, int,
         lines = f.readlines()
 
     line_count = len(lines)
-    summary_lines = lines[:max_lines]
-    summary = "".join(summary_lines).strip()
-    if len(lines) > max_lines:
-        summary += "\n..."
+
+    # Extract key analysis steps: imports + function calls
+    summary_parts = []
+    for line in lines:
+        stripped = line.strip()
+        # Skip empty lines and comments
+        if not stripped or stripped.startswith("#"):
+            continue
+        # Keep imports
+        if stripped.startswith("import ") or stripped.startswith("from "):
+            summary_parts.append(stripped)
+        # Keep key scanpy/anndata function calls
+        elif any(kw in stripped for kw in [
+            "sc.pp.", "sc.tl.", "sc.pl.", "sc.get.",
+            "adata.", "celltypist.", "scvi.",
+            "resolution=", "n_comps=", "n_pcs=",
+        ]):
+            summary_parts.append(stripped)
+
+    # Limit to max_lines
+    if len(summary_parts) > max_lines:
+        summary_parts = summary_parts[:max_lines]
+        summary_parts.append("...")
+
+    summary = "\n".join(summary_parts) if summary_parts else "".join(lines[:5]).strip() + "\n..."
 
     return lang, line_count, summary
 
@@ -183,13 +248,19 @@ def _generate_overview(
         f"- {path} ({lang}, {lines} lines)\n  ```\n{first_n}\n  ```"
         for path, lang, lines, first_n in script_summaries
     )
-    images_info = "\n".join(f"- {name}" for name in pic_filenames)
+    # Include analysis step for each image
+    images_info = "\n".join(
+        f"- {name} ({_get_analysis_step(name)[0]})"
+        for name in pic_filenames
+    )
 
     system_prompt = (
         "You are a senior bioinformatics analyst. Based on the research background, "
         "analysis scripts, and output figures provided, write a concise project overview "
         "as plain text paragraphs. Include: the research goal, analytical methods used, "
-        "and a brief summary of what the figures show. Do NOT repeat all details — "
+        "and a brief summary of what the figures show. For each analysis step found in the "
+        "figures, mention the specific tools/software used (e.g., scanpy, Seurat, dnbc4tools) "
+        "and key parameters if visible in the scripts. Do NOT repeat all details — "
         "synthesize into a high-level narrative. "
         "Output plain text only — NO headings, NO code fences, NO titles."
     )
@@ -197,7 +268,7 @@ def _generate_overview(
     human_content = (
         f"Research Background:\n{background}\n\n"
         f"Analysis Scripts:\n{scripts_info if scripts_info else '(none)'}\n\n"
-        f"Output Figures:\n{images_info if images_info else '(none)'}"
+        f"Output Figures (sorted by analysis pipeline order):\n{images_info if images_info else '(none)'}"
     )
 
     message = [
@@ -280,6 +351,7 @@ def _process_single_image(
                 caption_body = json_output.get("caption_body", "")
                 caption = json_output.get("caption", "")
                 section_summary = json_output.get("section_summary", "")
+                analysis_step = json_output.get("analysis_step", "")
 
                 if not caption and (caption_title or caption_body):
                     caption = " ".join(part for part in [caption_title, caption_body] if part)
@@ -291,6 +363,7 @@ def _process_single_image(
                     "caption_body": caption_body,
                     "caption": caption,
                     "section_summary": section_summary,
+                    "analysis_step": analysis_step,
                 }
             except Exception as e:
                 if attempt >= max_retry - 1:
@@ -336,28 +409,42 @@ def _build_index_md(
     # Images table
     lines.append("## Images")
     lines.append("")
-    lines.append("| # | File | Path | Dimensions | Size |")
-    lines.append("|---|------|------|------------|------|")
+    lines.append("| # | File | Analysis Step | Path | Dimensions | Size |")
+    lines.append("|---|------|---------------|------|------------|------|")
 
     for i, pic_path in enumerate(pic_abs_dirs, start=1):
         p = Path(pic_path)
         report_dir = Path(output_path).parent if output_path else project_path
         rel_path = os.path.relpath(p, start=report_dir).replace("\\", "/")
+        step, _ = _get_analysis_step(p.name)
         try:
             w, h = _get_image_dimensions(pic_path)
             dims = f"{w}x{h}"
         except Exception:
             dims = "N/A"
         size = _get_file_size_str(pic_path)
-        lines.append(f"| {i} | {p.name} | {rel_path} | {dims} | {size} |")
+        lines.append(f"| {i} | {p.name} | {step} | {rel_path} | {dims} | {size} |")
 
+    lines.append("")
+
+    # Analysis Pipeline
+    lines.append("## Analysis Pipeline")
+    lines.append("")
+    pipeline_steps: dict[str, list[str]] = {}
+    for i, pic_path in enumerate(pic_abs_dirs, start=1):
+        p = Path(pic_path)
+        step, _ = _get_analysis_step(p.name)
+        pipeline_steps.setdefault(step, []).append(f"图 {i} ({p.name})")
+    for step_name in dict.fromkeys(_get_analysis_step(p)[0] for p in pic_abs_dirs):
+        figs = pipeline_steps.get(step_name, [])
+        lines.append(f"- **{step_name}**: {', '.join(figs)}")
     lines.append("")
 
     # Scripts table
     lines.append("## Scripts")
     lines.append("")
-    lines.append("| # | File | Path | Language | Lines | Summary |")
-    lines.append("|---|------|------|----------|-------|---------|")
+    lines.append("| # | File | Path | Language | Lines | Key Analysis Steps |")
+    lines.append("|---|------|------|----------|-------|-------------------|")
 
     if script_abs_dirs:
         for i, script_path in enumerate(script_abs_dirs, start=1):
@@ -377,7 +464,9 @@ def _build_index_md(
     lines.append("")
 
     for i, cap in enumerate(captions, start=1):
-        lines.append(f"### Figure {i}: {cap.get('caption_title', '')}")
+        analysis_step = cap.get("analysis_step", "")
+        step_label = f" [{analysis_step}]" if analysis_step else ""
+        lines.append(f"### Figure {i}: {cap.get('caption_title', '')}{step_label}")
         lines.append("")
         if cap.get("caption_body"):
             lines.append(cap["caption_body"])

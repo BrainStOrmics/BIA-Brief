@@ -12,17 +12,18 @@ Indexer → ReAct Agent (w/ HITL interrupts) → Post-process → PDF
 
 | Step | Model | Responsibility |
 |------|-------|----------------|
-| **Indexer** | Multimodal (vision) | Scans `pics/` and `scripts/`, generates figure captions and section summaries in parallel |
+| **Indexer** | Multimodal (vision) | Scans `pics/` and `scripts/`, classifies figures by analysis step, generates captions and section summaries in parallel |
 | **ReAct Agent** | Text (reasoning) | Reads index, follows guides, assembles full report — with HITL interrupts for human review |
 | **Post-process** | — (deterministic) | Paragraph wrapping, figure renumbering (fallback), template rendering |
 | **PDF export** | — (Playwright) | Converts rendered Markdown to PDF with cover page, TOC, and page numbers |
+| **LaTeX export** | — (stdlib) | Converts rendered Markdown to LaTeX with native `\tableofcontents` |
 
 ## Project Layout
 
 ```text
 src/Brief/
   core.py              # Main entry point — Brief class, orchestrates full pipeline
-  indexer.py           # Project scanner + parallel caption/summary generation
+  indexer.py           # Project scanner + analysis step classification + parallel caption/summary generation
   agent.py             # ReAct agent definition (langchain.agents.create_agent)
   config/              # Model and runtime configuration (YAML)
     config.py          #   Config class definitions
@@ -33,11 +34,12 @@ src/Brief/
     indexer_tool.py    #   run_indexer — calls index_project, triggers HITL interrupt
     outline_review.py  #   review_outline — triggers HITL interrupt for outline approval
     task_ops.py        #   create_task_list, mark_task_complete
-  prompts/             # LLM prompt templates (English only)
+  prompts/             # LLM prompt templates
     agent.md           #   Agent role and workflow steps
     synthesist.md      #   Used by indexer for multimodal caption generation
     thesis.md          #   Discussion/conclusion generation guide (agent reads at runtime)
-    report.md          #   Report assembly guide (agent reads at runtime)
+    report.md          #   Report assembly guide with section structure and citation rules
+    prompt_template.py #   Prompt loading utilities
   utils/               # Helper utilities
     filemanager.py     #   Image/script discovery under project path
     io.py              #   File I/O utilities
@@ -61,6 +63,16 @@ local_tests/           # Test scripts and outputs
   output/              #   Generated reports and test results
 .harness/              # Agent constraint system (rules, runbooks, docs)
 ```
+
+## Platform Support
+
+BIA-Brief runs on both **Linux/macOS** and **Windows**.
+
+The human-in-the-loop (HITL) review step uses platform-specific timeout mechanisms:
+- **Linux/macOS**: `signal.SIGALRM` for interrupt-based timeout
+- **Windows**: `threading.Timer` (since `SIGALRM` is not available on Windows)
+
+Platform detection is automatic via `sys.platform` — no configuration needed.
 
 ## Installation
 
@@ -181,11 +193,13 @@ The LaTeX pipeline:
 
 The pipeline produces three layers of content:
 
-1. **Captions** — per-figure title and concise axes/panel descriptions
-2. **Section summaries** — integrated analysis combining image content, script context, and background
+1. **Captions** — per-figure title, axes/panel descriptions, and analysis step classification
+2. **Section summaries** — focused findings and biological interpretation per figure
 3. **Discussion + Conclusion + Key Takeaways** — higher-level synthesis across all sections
 
-These are assembled into a structured Markdown report with table of contents, embedded figures, citations, and references.
+Figures are automatically sorted by analysis pipeline order (QC → HVG → PCA → Clustering → Markers → Annotation → PAGA) rather than alphabetically, ensuring the report follows a logical analytical narrative.
+
+The final report includes a two-level table of contents, inline figures, citations with a curated bibliography, and a required section structure covering data QC through functional enrichment analysis.
 
 ## Template System
 

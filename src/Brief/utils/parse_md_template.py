@@ -75,7 +75,9 @@ def render_report_markdown(
         for path in pic_abs_dirs
     ]
 
-    cover_image_path = project_root / "template" / "BGI_SY" / "pics" / "cover.png"
+    # Use repo root (relative to this file's location) instead of project_path
+    repo_root = Path(__file__).resolve().parents[3]  # src/Brief/utils/ -> repo root
+    cover_image_path = repo_root / "template" / "BGI_SY" / "pics" / "cover.png"
     cover_image_md_path = _relative_path_from_report(cover_image_path, report_output_dir)
 
     template_context = _build_template_context(

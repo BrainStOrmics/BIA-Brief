@@ -93,11 +93,13 @@ All output must strictly follow the output_lang decision.
 
 #### **A.1 Title Format (`caption_title`)**
 
-**Requirement:** Use language-consistent figure numbering:
-- **Chinese**: `图 {figure_id 数字}. [类型] + [内容]`
-  - Example: `图 1. 单细胞 UMAP 聚类分布图，展示卵巢细胞亚群划分。`
-- **English**: `Figure {figure_id number}. [Type] + [Content]`
-  - Example: `Figure 1. Single-cell UMAP clustering showing ovarian cell subpopulations.`
+**Requirement:** Describe the figure content WITHOUT figure numbers. The numbering is managed externally by the report system.
+- **Chinese**: `[类型] + [内容]`
+  - Example: `单细胞 UMAP 聚类分布图，展示卵巢细胞亚群划分。`
+- **English**: `[Type] + [Content]`
+  - Example: `Single-cell UMAP clustering showing ovarian cell subpopulations.`
+
+**DO NOT** include "图 X." or "Figure X." in the caption_title — those are added by the report generation system.
 
 **Logic:** Synthesize plot type from `code_snippet` and sample info from `background`.
 
@@ -129,27 +131,37 @@ Include the primary observation in `caption` (concatenation of title + body), no
 
 ### Procedure B: Section Synthesis & Summary
 
-Write a comprehensive section_summary (1 paragraph, 4-6 sentences) that integrates ALL three aspects below. Do NOT split into separate paragraphs — weave them into a single flowing narrative.
+#### **B.0 Analysis Step (`analysis_step`)**
+Classify this figure into one of the standard analysis steps:
+- `数据质量控制` — QC violin/scatter plots
+- `数据标准化` — normalization, mRNA/mitochondrial plots
+- `高变基因筛选` — HVG selection plots
+- `PCA降维分析` — PCA variance/elbow plots
+- `细胞聚类分析` — Leiden/UMAP clustering plots
+- `标记基因鉴定` — marker gene ranking/expression plots
+- `细胞类型注释` — cell type annotation UMAP
+- `细胞间通讯网络分析` — PAGA / CellChat network plots
+- `拟时序分析` — pseudotime / trajectory plots
+- `GO与Pathway功能分析` — enrichment analysis plots
+- `其他分析` — if none of the above
 
-#### **B.1 Method & Rationale (方法及原理)**
-State what analysis was performed, what parameters/thresholds were used, and **why this method is appropriate** for the biological question. Explain the methodological rationale — not just what was done, but why it was done this way.
+#### **B.1 Section Summary**
 
-#### **B.2 Key Observations (关键发现)**
-Report **specific, quantifiable findings** from the figure. Include concrete numbers (cluster counts, gene names, variance percentages, p-values) rather than vague statements. This section should ground the analysis in observable data.
+Write a focused section_summary (2-3 sentences, **NO more than 80 words in Chinese or 120 words in English**) that covers:
+1. **Key finding**: What is the main observation from this figure? Include specific numbers (cluster counts, gene names, percentages).
+2. **Biological implication**: What does this mean for the research question?
+3. **Connection to next step**: Briefly state how this feeds into downstream analysis.
 
-#### **B.3 Biological Interpretation (生物学解读)**
-Explain what the results mean in biological context. Connect findings to:
-- Specific gene functions or signaling pathways
-- Cellular processes or developmental mechanisms
-- Implications for downstream analysis or broader biological significance
+**DO NOT** describe the method or tool used in detail — that belongs in the report body. The section_summary should focus on findings and interpretation only.
 
 **Example (Chinese, scRNA-seq context):**
 ```json
 {
-    "caption_title": "图 3. 单细胞转录组高变基因筛选分布图。",
+    "caption_title": "单细胞转录组高变基因筛选分布图。",
     "caption_body": "X 轴表示基因平均表达量，Y 轴表示基因离散度。",
-    "caption": "图 3. 单细胞转录组高变基因筛选分布图。X 轴表示基因平均表达量，Y 轴表示基因离散度。",
-    "section_summary": "采用基于离散度的方法筛选高变基因，通过将基因按平均表达量分箱后计算标准化方差，区分生物学变异与技术噪声，筛选出 2000 个高变基因用于下游分析。散点图中位于左上区域的基因具有高离散度但低平均表达量，代表在少数细胞中特异性高表达的基因，这类基因最有可能编码细胞类型特异的表面标志或功能分子。该筛选步骤有效去除了大量低信息量的技术噪音基因，确保后续 PCA 降维和 Leiden 聚类能够聚焦于最具生物学意义的转录变异特征，为细胞亚群的精准划分提供关键的分子基础。"
+    "caption": "单细胞转录组高变基因筛选分布图。X 轴表示基因平均表达量，Y 轴表示基因离散度。",
+    "analysis_step": "高变基因筛选",
+    "section_summary": "高离散度基因集中在低平均表达量区域，代表少数细胞中特异性高表达的基因，最可能编码细胞类型特异的表面标志物。该筛选步骤为后续 PCA 降维和 Leiden 聚类提供了聚焦于核心生物学变异的分子特征基础。"
 }
 ```
 
@@ -164,6 +176,7 @@ CRITICAL CONSTRAINT: Your entire response must be a single, complete, and valid 
     "caption_title": "<string>",
     "caption_body": "<string>",
     "caption": "<string>",
+    "analysis_step": "<string>",
     "section_summary": "<string>"
 }
 ```
@@ -172,10 +185,11 @@ CRITICAL CONSTRAINT: Your entire response must be a single, complete, and valid 
 
 ```json
 {
-    "caption_title": "Figure 1. Volcano plot of rice pistil transcriptomic response to salt stress.",
-    "caption_body": "X-axis shows log2 fold change; Y-axis shows -log10(p-value). Red dots: upregulated genes (log2FC > 1, p < 0.05); blue dots: downregulated genes. ABA pathway markers are labeled.",
-    "caption": "Figure 1. Volcano plot of rice pistil transcriptomic response to salt stress. X-axis shows log2 fold change; Y-axis shows -log10(p-value). Red dots: upregulated genes (log2FC > 1, p < 0.05); blue dots: downregulated genes. ABA pathway markers are labeled.",
-    "section_summary": "We performed differential expression analysis using DESeq2 to identify salt-responsive genes. The analysis revealed 1,234 upregulated and 987 downregulated genes (FDR < 0.05). Enrichment analysis showed ABA and JA pathway activation, suggesting hormonal crosstalk mediates salt tolerance during reproductive development."
+    "caption_title": "Volcano plot of rice pistil transcriptomic response to salt stress.",
+    "caption_body": "X-axis shows log2 fold change; Y-axis shows -log10(p-value).",
+    "caption": "Volcano plot of rice pistil transcriptomic response to salt stress. X-axis shows log2 fold change; Y-axis shows -log10(p-value).",
+    "analysis_step": "差异表达分析",
+    "section_summary": "DESeq2 差异表达分析鉴定 1,234 个上调基因和 987 个下调基因（FDR < 0.05）。富集分析显示 ABA 和 JA 通路激活，表明激素互作介导生殖期盐耐受。"
 }
 ```
 
@@ -183,9 +197,10 @@ CRITICAL CONSTRAINT: Your entire response must be a single, complete, and valid 
 
 ```json
 {
-    "caption_title": "图 1. 水稻雌蕊盐胁迫转录组响应火山图。",
-    "caption_body": "X 轴表示 log2(Fold Change)，Y 轴表示 -log10(p-value)。红点：上调基因（log2FC > 1, p < 0.05）；蓝点：下调基因。图中标注了 ABA 通路标志物。",
-    "caption": "图 1. 水稻雌蕊盐胁迫转录组响应火山图。X 轴表示 log2(Fold Change)，Y 轴表示 -log10(p-value)。红点：上调基因（log2FC > 1, p < 0.05）；蓝点：下调基因。图中标注了 ABA 通路标志物。",
-    "section_summary": "本研究采用 DESeq2 进行差异表达分析，鉴定盐胁迫响应基因。共识别 1,234 个上调基因和 987 个下调基因（FDR < 0.05）。富集分析显示 ABA 和 JA 通路被激活，表明激素互作介导生殖期盐耐受。"
+    "caption_title": "水稻雌蕊盐胁迫转录组响应火山图。",
+    "caption_body": "X 轴表示 log2(Fold Change)，Y 轴表示 -log10(p-value)。",
+    "caption": "水稻雌蕊盐胁迫转录组响应火山图。X 轴表示 log2(Fold Change)，Y 轴表示 -log10(p-value)。",
+    "analysis_step": "差异表达分析",
+    "section_summary": "DESeq2 差异表达分析鉴定 1,234 个上调基因和 987 个下调基因（FDR < 0.05）。富集分析显示 ABA 和 JA 通路激活，表明激素互作介导生殖期盐耐受。"
 }
 ```

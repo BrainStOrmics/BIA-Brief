@@ -77,6 +77,8 @@ class AgentStepPrinter:
 def _wait_for_human_review(prompt_msg: str, timeout: int = 300) -> str:
     """Print prompt, wait for user input with timeout.
 
+    Uses signal.SIGALRM on Linux/macOS, threading.Timer on Windows.
+
     Args:
         prompt_msg: Message to display (from interrupt metadata).
         timeout: Seconds to wait before auto-resume.
@@ -85,15 +87,49 @@ def _wait_for_human_review(prompt_msg: str, timeout: int = 300) -> str:
         User feedback string. Timeout returns auto-resume message,
         EOFError returns approval message.
     """
-    import signal
-
-    def _timeout_handler(signum: int, frame: Any) -> None:
-        raise TimeoutError("Human review timed out")
+    import sys
 
     print(f"\n{_GREEN}{'='*60}{_RESET}")
     print(f"{_GREEN}{prompt_msg}{_RESET}")
     print(f"{_YELLOW}编辑后按 Enter 继续...（{timeout}s 超时）{_RESET}")
     print(f"{_GREEN}{'='*60}{_RESET}")
+
+    if sys.platform == "win32":
+        return _wait_for_human_review_windows(timeout)
+    else:
+        return _wait_for_human_review_posix(timeout)
+
+
+def _wait_for_human_review_windows(timeout: int) -> str:
+    """Windows implementation using threading.Timer (no SIGALRM available)."""
+    import threading
+
+    timed_out = threading.Event()
+
+    def _timeout_handler() -> None:
+        timed_out.set()
+        logger.info("Human review timed out, auto-resuming")
+
+    timer = threading.Timer(timeout, _timeout_handler)
+    timer.daemon = True
+    timer.start()
+    try:
+        user_input = input()
+        timer.cancel()
+        if timed_out.is_set():
+            return "审阅超时自动继续（未编辑）"
+        return user_input
+    except EOFError:
+        timer.cancel()
+        return "审阅通过"
+
+
+def _wait_for_human_review_posix(timeout: int) -> str:
+    """Linux/macOS implementation using signal.SIGALRM."""
+    import signal
+
+    def _timeout_handler(signum: int, frame: Any) -> None:
+        raise TimeoutError("Human review timed out")
 
     signal.signal(signal.SIGALRM, _timeout_handler)
     signal.alarm(timeout)
@@ -219,6 +255,7 @@ class Brief:
 
         # Build user message (agent will extract params and call run_indexer)
         thesis_guide_path = str(Path(__file__).resolve().parent / "prompts" / "thesis.md")
+        report_guide_path = str(Path(__file__).resolve().parent / "prompts" / "report.md")
         user_msg = (
             f"Generate a bioinformatics report.\n\n"
             f"Background: {background}\n"
@@ -226,6 +263,7 @@ class Brief:
             f"Output path: {output_path}\n"
             f"Project path: {project_path}\n"
             f"Thesis guide path: {thesis_guide_path}\n"
+            f"Report guide path: {report_guide_path}\n"
         )
 
         config = {"configurable": {"thread_id": f"brief-{uuid.uuid4().hex[:8]}"}}
