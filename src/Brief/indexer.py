@@ -116,7 +116,6 @@ ANALYSIS_STEP_MAP = {
     "markers": ("标记基因鉴定", 8),
     "leiden_search": ("细胞聚类分析", 5),
     "leiden": ("细胞聚类分析", 6),
-    "Annotation": ("细胞类型注释", 9),
     "annotation": ("细胞类型注释", 9),
     "paga": ("细胞间通讯网络分析", 10),
     "pseudotime": ("拟时序分析", 11),
@@ -530,7 +529,7 @@ def index_project(
 
     # Process images in parallel
     logger.info("Processing %d images in parallel...", len(pic_abs_dirs))
-    captions: list[dict[str, str]] = [{}] * len(pic_abs_dirs)
+    captions: list[dict[str, str]] = [{} for _ in pic_abs_dirs]
 
     with ThreadPoolExecutor() as executor:
         futures = {

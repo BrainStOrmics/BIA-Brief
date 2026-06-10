@@ -218,12 +218,14 @@ class Brief:
         self,
         background: str,
         output_lang: str,
+        custom_title: str = "",
     ) -> tuple[str, dict[str, Any]]:
         """Run the report generation pipeline.
 
         Args:
             background: Research background description.
             output_lang: Output language (e.g., "zh-CN", "en").
+            custom_title: Optional custom report title. If provided, overrides the agent-generated title.
 
         Returns:
             Tuple of (report_md, report_dict).
@@ -314,12 +316,18 @@ class Brief:
 
         # Step 5: Template rendering
         logger.info("Step 5: Rendering template...")
-        # Read title from agent's output (written to output_path.title)
-        title_path = Path(output_path + ".title")
-        report_title = title_path.read_text(encoding="utf-8").strip() if title_path.exists() else ""
-        if not report_title:
-            # Fallback: derive from background
-            report_title = "生物信息学分析报告"
+        # Read title: use custom_title if provided, otherwise agent's output
+        if custom_title:
+            report_title = custom_title
+            # Also overwrite the .title file so downstream tools use it
+            title_path = Path(output_path + ".title")
+            title_path.write_text(report_title, encoding="utf-8")
+        else:
+            title_path = Path(output_path + ".title")
+            report_title = title_path.read_text(encoding="utf-8").strip() if title_path.exists() else ""
+            if not report_title:
+                # Fallback: derive from background
+                report_title = "生物信息学分析报告"
 
         template_fields_dict = build_template_fields({"body_md": report_md}, report_title=report_title)
 

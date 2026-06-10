@@ -63,18 +63,7 @@ All output must strictly follow the output_lang decision.
 - **IF zh-CN**: Use standard Chinese academic terminology (例如：使用"聚类"而非"cluster"，"差异表达基因"而非"DEG"）。
 - **IF en**: Use clear English scientific prose.
 
-### Step 2: Figure Caption Format (Language-Specific)
-
-**CRITICAL:** The figure identifier format MUST match the output language:
-
-| Output Language | caption_title Format | Example |
-|-----------------|---------------------|---------|
-| zh-CN (中文) | `图 X. [标题]` | `图 1. UMAP 聚类分布图` |
-| English | `Figure X. [Title]` | `Figure 1. UMAP clustering distribution` |
-
-**DO NOT mix languages** — if output_lang is Chinese, use "图 X" throughout; if English, use "Figure X".
-
-### Step 3: Field Responsibilities
+### Step 2: Field Responsibilities
 
 | Field | Purpose | Length | Content |
 |-------|---------|--------|---------|
@@ -93,33 +82,38 @@ All output must strictly follow the output_lang decision.
 
 #### **A.1 Title Format (`caption_title`)**
 
-**Requirement:** Describe the figure content WITHOUT figure numbers. The numbering is managed externally by the report system.
-- **Chinese**: `[类型] + [内容]`
-  - Example: `单细胞 UMAP 聚类分布图，展示卵巢细胞亚群划分。`
-- **English**: `[Type] + [Content]`
-  - Example: `Single-cell UMAP clustering showing ovarian cell subpopulations.`
+**CRITICAL: NO figure numbers.** The numbering is managed externally by the report system. You must NEVER include "图 X.", "图X.", "Figure X.", or any numbering prefix.
 
-**DO NOT** include "图 X." or "Figure X." in the caption_title — those are added by the report generation system.
+- **Chinese**: `[类型] + [内容]`
+  - ✅ `单细胞 UMAP 聚类分布图，展示卵巢细胞亚群划分。`
+  - ❌ `图 1. 单细胞 UMAP 聚类分布图。`
+  - ❌ `图4. 标记基因排名图。`
+- **English**: `[Type] + [Content]`
+  - ✅ `Single-cell UMAP clustering showing ovarian cell subpopulations.`
+  - ❌ `Figure 1. Single-cell UMAP clustering.`
 
 **Logic:** Synthesize plot type from `code_snippet` and sample info from `background`.
 
 #### **A.2 Visual Description (`caption_body`)**
 
-**Requirement:** State ONLY axes labels or panel layout in 1 sentence:
+**Requirement:** State ONLY axes labels or panel layout in 1 sentence. Return empty string `""` when none apply.
+
 - **For plots with X/Y axes**: "X 轴表示...，Y 轴表示..."
 - **For multi-panel plots**: "左图：...；右图：..." or "上：...；下：..."
-- **Otherwise**: Omit description entirely (use title only)
+- **For network diagrams, single-panel heatmaps, or plots without meaningful axes**: Return `""` (empty string)
 
 **STRICTLY FORBIDDEN:**
 - ❌ No color interpretation (e.g., "颜色表示...", "红色代表...")
 - ❌ No symbol interpretation (e.g., "散点代表...", "每个点表示...")
 - ❌ No panel count descriptions (e.g., "16 个子图分别对应...")
 - ❌ No biological interpretation or methodology
+- ❌ No filler — if the only thing to say is "X 轴表示 UMAP1，Y 轴表示 UMAP2", return `""` instead
 
 **Examples:**
 - ✅ Scatter: `X 轴表示总计数，Y 轴表示基因数。`
 - ✅ Multi-panel: `左图：标准化后；右图：未标准化。`
-- ✅ UMAP: `X 轴表示 UMAP1，Y 轴表示 UMAP2。`
+- ✅ Empty: `""` (for PAGA network, single UMAP with no extra info, or similar)
+- ❌ `X 轴表示 UMAP1，Y 轴表示 UMAP2。` (useless filler — omit instead)
 - ❌ `X 轴表示 UMAP1，Y 轴表示 UMAP2，颜色对应 Leiden 聚类结果。`
 - ❌ `16 个面板分别展示 Cluster 0-15 的差异基因排名。`
 
@@ -132,18 +126,21 @@ Include the primary observation in `caption` (concatenation of title + body), no
 ### Procedure B: Section Synthesis & Summary
 
 #### **B.0 Analysis Step (`analysis_step`)**
-Classify this figure into one of the standard analysis steps:
+Classify this figure into **exactly one** of the following standard steps. You MUST pick from this list — do NOT invent new labels.
+
 - `数据质量控制` — QC violin/scatter plots
 - `数据标准化` — normalization, mRNA/mitochondrial plots
 - `高变基因筛选` — HVG selection plots
 - `PCA降维分析` — PCA variance/elbow plots
 - `细胞聚类分析` — Leiden/UMAP clustering plots
-- `标记基因鉴定` — marker gene ranking/expression plots
-- `细胞类型注释` — cell type annotation UMAP
+- `标记基因鉴定` — marker gene ranking/expression plots (dotplot, rank_genes_groups, markers)
+- `细胞类型注释` — cell type annotation UMAP (final Annotation plot ONLY)
 - `细胞间通讯网络分析` — PAGA / CellChat network plots
 - `拟时序分析` — pseudotime / trajectory plots
 - `GO与Pathway功能分析` — enrichment analysis plots
 - `其他分析` — if none of the above
+
+**Important:** Marker gene expression UMAPs (showing multiple genes) are `标记基因鉴定`, NOT `细胞类型注释`. Only the final annotation UMAP (with cell type labels) is `细胞类型注释`.
 
 #### **B.1 Section Summary**
 
@@ -154,7 +151,7 @@ Write a focused section_summary (2-3 sentences, **NO more than 80 words in Chine
 
 **DO NOT** describe the method or tool used in detail — that belongs in the report body. The section_summary should focus on findings and interpretation only.
 
-**Example (Chinese, scRNA-seq context):**
+**Example 1 (Chinese, HVG plot):**
 ```json
 {
     "caption_title": "单细胞转录组高变基因筛选分布图。",
@@ -162,6 +159,17 @@ Write a focused section_summary (2-3 sentences, **NO more than 80 words in Chine
     "caption": "单细胞转录组高变基因筛选分布图。X 轴表示基因平均表达量，Y 轴表示基因离散度。",
     "analysis_step": "高变基因筛选",
     "section_summary": "高离散度基因集中在低平均表达量区域，代表少数细胞中特异性高表达的基因，最可能编码细胞类型特异的表面标志物。该筛选步骤为后续 PCA 降维和 Leiden 聚类提供了聚焦于核心生物学变异的分子特征基础。"
+}
+```
+
+**Example 2 (Chinese, PAGA network — note empty caption_body):**
+```json
+{
+    "caption_title": "单细胞聚类 PAGA 拓扑网络图。",
+    "caption_body": "",
+    "caption": "单细胞聚类 PAGA 拓扑网络图。",
+    "analysis_step": "细胞间通讯网络分析",
+    "section_summary": "PAGA 网络展示了 16 个聚类簇间的拓扑连通性，粗连线表明特定亚群间存在紧密的转录组相似性。该结构为后续拟时序推断和细胞状态转换分析提供了全局参考框架。"
 }
 ```
 
