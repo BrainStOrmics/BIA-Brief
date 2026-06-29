@@ -351,7 +351,7 @@ table.report-table td,
 <span class='toc-page'>11</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;2.1 华大Stereo-seq V2空间组技术原理</span>
+<span class='toc-item'>&emsp;&emsp;2.1 华大DNBelab C4单细胞技术原理</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>11</span>
 </div>
@@ -427,29 +427,21 @@ table.report-table td,
 
 ### 1 技术简介
 
-<p style='text-indent:18.20pt'>本项目使用华大自主研发的单细胞组学技术（Stereo-seq V2）<sup>[1]</sup>，分析目标样本的单细胞水平的转录表达模式，全流程概览如图1所示。</p>
+<p style='text-indent:18.20pt'>本项目使用华大自主研发的单细胞组学技术（DNBelab C4）<sup>[1]</sup>，分析目标样本的单细胞水平的转录表达模式，全流程概览如图1所示。</p>
 
 <p style='text-indent:18.20pt'><strong>实验流程：</strong></p>
 
-<p style='text-indent:18.20pt'>1 样本处理及质检：对目标组织样本（FFPE组织切片）进行脱蜡、重水化和去交联处理，并使用甲醇固定，确保RNA可被捕获；</p>
+<p style='text-indent:18.20pt'>1 样品处理及质检：对目标组织样本进行细胞/细胞核悬液制备，并进行细胞/细胞核悬液质控评估；</p>
 
-<p style='text-indent:18.20pt'>2 RNA捕获及cDNA合成：在处理后的切片上加入含随机引物和连接寡核苷酸的探针，通过原位逆转录和连接反应，将组织内的总RNA转录为cDNA，并与芯片上的DNA纳米球探针结合。每个探针包含空间坐标信息（CID）和分子标识符（UMI），实现空间定位；</p>
+<p style='text-indent:18.20pt'>2 单细胞分离及mRNA分子的捕获：对制备合格的细胞/细胞核悬液通过DNBelab C4的液滴微流控设备，完成液滴的生成，实现单个细胞的分离，液滴生成后破乳回收mRNA分子，并对mRNA分子进行逆转录合成cDNA；</p>
 
-<p style='text-indent:18.20pt'>3 文库制备及测序：将芯片上的cDNA释放并进行PCR扩增，构建测序文库。最终使用MGI平台进行高通量测序，获取空间转录组数据；</p>
-
+<p style='text-indent:18.20pt'>3 文库制备及测序：cDNA合成后构建测序文库并完成测序；</p>
 <p style='text-indent:18.20pt'><strong>数据分析：</strong></p>
+<p style='text-indent:18.20pt'>针对下机数据进行质控，并完成全套分析，最终得到目标样本细胞/细胞核水平表达的基因信息。</p>
 
-<p style='text-indent:18.20pt'>针对下机数据进行质控、比对和表达矩阵构建，并完成以下分析流程，最终得到目标样本在空间维度上的基因表达信息：</p>
+![图片](./BGI_SY/pics/fig1.png)
 
-<p style='text-indent:18.20pt'>空间定位与表达矩阵构建：通过CID和UMI信息定位每个cDNA的空间位置，并构建空间表达矩阵；</p>
-
-<p style='text-indent:18.20pt'>细胞分割与注释：使用Spateo算法基于核内未剪接RNA信号进行细胞分割，结合MERFISH数据进行细胞类型注释；</p>
-
-<p style='text-indent:18.20pt'>空间聚类与组织结构识别：利用SpaceFlow和Leiden算法进行空间聚类，识别组织结构和功能区域。</p>
-
-![图1](./BGI_SY/pics/fig1_stereo_workflow.jpeg)
-
-<p align='center'>图1 空间组学技术流程图。</p>
+<p align='center'>图1 单细胞组学技术流程图。</p>
 
 <div style='page-break-after: always;'></div>
 
@@ -481,7 +473,7 @@ table.report-table td,
 
 #### 3.1 下机数据质控
 
-<p style='text-indent:18.20pt; page-break-before: avoid; page-break-after: avoid;'>测序数据下机后，会对read1和read2进行数据质控，read1为包含20bp cell barcode以及10bp UMI序列，read2为cDNA序列。使用dnbc4tools<sup>[2]</sup>工具对read1和read2进行质控过滤，质控统计结果见表2。</p>
+<p style='text-indent:18.20pt; page-break-before: avoid; page-break-after: avoid;'>测序数据下机后，会对read1和read2进行数据质控，read1为包含20bp cell barcode以及10bp UMI序列，read2为cDNA序列。 使用dnbc4tools<sup>[2]</sup>工具对read1和read2进行质控过滤，质控统计结果见表2。</p>
 
 <p align='center' style='page-break-after: avoid;'>表2 下机数据质控统计结果 ( 下载)</p>
 
@@ -609,25 +601,25 @@ table.report-table td,
 
 <p>从样品接收到项目交付的整体项目流程如下：</p>
 
-![图1](./BGI_SY/pics/methods_project_flow.png)
+![图片](./BGI_SY/pics/methods_project_flow_sc.png)
 
 <p align='center'>图1 项目流程图。</p>
 
 ### 2 实验流程
 
-#### 2.1 华大Stereo-seq V2空间组技术原理
+#### 2.1 华大DNBelab C4单细胞技术原理
 
-<p style='text-indent:18.20pt'>华大Stereo-seq V2技术是基于空间条形码（spatial barcodes）的高分辨率空间转录组测序平台，其核心原理是在高密度芯片上设计独特的空间条形码阵列，通过组织切片与芯片的直接接触，使组织中的RNA分子与芯片上的空间条形码特异性结合。在测序过程中，每个RNA分子的序列与其对应的空间条形码一同被读取，从而精确确定每个转录本的空间位置。Stereo-seq V2技术实现了亚细胞级的空间分辨率（约1μm），能够同时检测组织切片中成千上万个空间位置的基因表达信息，无需依赖液滴微流控系统，可直接对完整组织切片进行高通量空间转录组分析，为组织微环境中的细胞异质性和空间基因表达模式研究提供了有力工具。</p>
+<p style='text-indent:18.20pt'>DNBelab C4 技术是基于负压的液滴微流控系统， 通过引入自主专利的液滴标签技术 (Disc-seq : Droplet-indexed highthroughput single-cell sequencing) ， 将带有标签的捕获磁珠与单个细胞或者细胞核包裹在液滴中， 采用Droplet index的技术实现磁珠的超泊松分布， 在液滴中完成细胞裂解和捕获mRNA或DNA分子及用于识别来自同一液滴磁珠的标签序列， 对cDNA和Droplet index进行文库构建和测序， 即可一次性获得大量细胞的基因表达或染色质开放区基因信息， 如下图所示。</p>
 
-![图2](./BGI_SY/pics/methods_stereo_principle.png)
+![图片](./BGI_SY/pics/methods_dnbc4_principle.png)
 
-<p align='center'>图2 Stereo-seq空间技术原理示意图。</p>
+<p align='center'>图2 DNBelab C4单细胞技术原理示意图。</p>
 
 #### 2.2 测序文库结构
 
 <p style='text-indent:18.20pt'>cDNA经PCR扩增、 酶切、 筛选、 再扩增、 成环、 构建可用于DNBSEQ测序的标准文库后， 进行上机测序。 文库结构如下图所示。</p>
 
-![图3](./BGI_SY/pics/methods_library_structure.png)
+![图片](./BGI_SY/pics/methods_library_structure_sc.png)
 
 <p align='center'>图3 单细胞测序文库结构示意图。</p>
 
@@ -687,16 +679,6 @@ table.report-table td,
 <td><p>DNBelab_C_Series_HT_singlecellanalysis-software</p></td>
 <td><p>v2.1.3</p></td>
 <td><p>用于单细胞数据分析的预处理与表达矩阵生成的软件。</p></td>
-</tr>
-<tr>
-<td><p>Stereopy</p></td>
-<td><p>V1.6.1</p></td>
-<td><p>Stereopy是一个基于空间转录组学数据挖掘和可视化的基础和综合工具，如stereseq（空间增强分辨率组学测序）数据。这里将添加更多的分析，或者来自其他流行的工具，或者由我们自己开发，以满足不同的需求。</p></td>
-</tr>
-<tr>
-<td><p>Scanpy</p></td>
-<td><p>V1.11.0</p></td>
-<td><p>Scanpy是一个可扩展的工具包，用于分析与anndata联合构建的单细胞基因表达数据。它包括预处理、可视化、聚类、轨迹推断和差分表达式测试。</p></td>
 </tr>
 <tr>
 <td><p>Seurat</p></td>
@@ -834,6 +816,6 @@ FGHEG5%GDDH9GGGGEF.9G3I:C'GFF?)-4'GAIDFG/4IGH=HIFG #序列碱基质量值</pre><
 
 <div class='ref-title'><span class='ref-dot' aria-hidden='true'></span><span class='ref-text'>参考文献</span></div>
 
-<p style='text-indent:18.20pt'>[1] Yu Z, Young L, Ying H, et al. Stereo-seq V2: Spatial mapping of total RNA on FFPE sections with high resolution, Cell, 2025 Aug 28; doi: https://doi.org/10.1016/j.cell.2025.08.008</p>
+<p style='text-indent:18.20pt'>[1] Liu C, Wu T, Fan F, et al. A portable and cost-eﬀective microfluidic system for massively parallel single-cell transcriptome profiling. bioRxiv, 2019: 818450</p>
 
 <p style='text-indent:18.20pt'>[2] DNBelab_C_Series_HT_scRNA-analysis-software</p>

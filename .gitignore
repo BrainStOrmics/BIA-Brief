@@ -6,6 +6,9 @@ src/Brief/config/config.yaml
 *.yaml
 .github/
 pics/
+tables
+figures/
+project_info.md
 scripts/
 output/
 index.md
@@ -16,3 +19,4 @@ template/BGI_SY/repo-temp-pics/
 CLAUDE.md
 local_tmp/
 run.py
+node_modules/

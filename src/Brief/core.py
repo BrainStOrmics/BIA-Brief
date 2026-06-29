@@ -23,6 +23,7 @@ from .tools.indexer_tool import create_indexer_tool
 from .utils.postprocess import (
     build_template_fields,
     embed_figures_in_body,
+    load_table_files,
     wrap_body_paragraphs,
 )
 from .utils.parse_md_template import render_report_markdown
@@ -86,8 +87,18 @@ def _wait_for_human_review(prompt_msg: str, timeout: int = 300) -> str:
     Returns:
         User feedback string. Timeout returns auto-resume message,
         EOFError returns approval message.
+
+    Env bypass:
+        Set BRIEF_AUTO_APPROVE=1 to skip the prompt entirely and return
+        an empty approval string immediately. Used by parallel batch runs
+        where interactive HITL is not feasible.
     """
+    import os
     import sys
+
+    if os.environ.get("BRIEF_AUTO_APPROVE") == "1":
+        logger.info("HITL auto-approved (BRIEF_AUTO_APPROVE=1): %s", prompt_msg[:80])
+        return ""
 
     print(f"\n{_GREEN}{'='*60}{_RESET}")
     print(f"{_GREEN}{prompt_msg}{_RESET}")
@@ -256,7 +267,6 @@ class Brief:
         )
 
         # Build user message (agent will extract params and call run_indexer)
-        thesis_guide_path = str(Path(__file__).resolve().parent / "prompts" / "thesis.md")
         report_guide_path = str(Path(__file__).resolve().parent / "prompts" / "report.md")
         user_msg = (
             f"Generate a bioinformatics report.\n\n"
@@ -264,7 +274,6 @@ class Brief:
             f"Output language: {output_lang}\n"
             f"Output path: {output_path}\n"
             f"Project path: {project_path}\n"
-            f"Thesis guide path: {thesis_guide_path}\n"
             f"Report guide path: {report_guide_path}\n"
         )
 
@@ -309,8 +318,9 @@ class Brief:
         # Build figure items from index for post-processing
         figure_items = self._build_figure_items(index_path, project_path, output_path)
 
-        # Embed missing figures + renumber
-        report_md = embed_figures_in_body(raw_md, figure_items, output_lang)
+        # Embed missing figures + renumber. start_index=2 because 图1 is the
+        # static workflow figure in 技术简介 (provided by the template).
+        report_md = embed_figures_in_body(raw_md, figure_items, output_lang, start_index=2)
         # Wrap paragraphs with indentation
         report_md = wrap_body_paragraphs(report_md)
 
@@ -323,13 +333,31 @@ class Brief:
             title_path = Path(output_path + ".title")
             title_path.write_text(report_title, encoding="utf-8")
         else:
-            title_path = Path(output_path + ".title")
-            report_title = title_path.read_text(encoding="utf-8").strip() if title_path.exists() else ""
+            # Priority: project_info.md > agent's .title file > default
+            project_info_path = Path(project_path) / "project_info.md"
+            report_title = ""
+            if project_info_path.exists():
+                try:
+                    for line in project_info_path.read_text(encoding="utf-8").splitlines():
+                        if line.startswith("报告名称"):
+                            report_title = line.split("：", 1)[-1].split(":", 1)[-1].strip()
+                            break
+                except Exception as e:
+                    logger.warning("Failed to read project_info.md: %s", e)
+
             if not report_title:
-                # Fallback: derive from background
+                # Fallback: agent's .title file
+                title_path = Path(output_path + ".title")
+                report_title = title_path.read_text(encoding="utf-8").strip() if title_path.exists() else ""
+
+            if not report_title:
+                # Final fallback
                 report_title = "生物信息学分析报告"
 
         template_fields_dict = build_template_fields({"body_md": report_md}, report_title=report_title)
+
+        # Load project-specific table content (4 tables from <project_path>/table/)
+        template_fields_dict.update(load_table_files(project_path))
 
         project_root = Path(project_path).expanduser().resolve()
         report_output_path = Path(output_path)

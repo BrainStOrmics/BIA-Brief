@@ -53,15 +53,25 @@ template/              # Report templates and cover assets
     cover.md           #   Cover page template
     pics/              #   Cover background / watermark images
   repo.md              #   Commercial delivery template
-  repo_temp.md         #   Minimal working template (used in tests)
+  repo_temp.md         #   Minimal working template
+  repo_temp_sc.md      #   scRNA-seq template (used in tests)
   scRNA_base.md        #   scRNA-seq base template
-pics/                  # Example figures
-scripts/               # Example analysis scripts
-local_tests/           # Test scripts and outputs
-  fudan.py             #   End-to-end scRNA-seq report generation test
-  generate_caption_test.py
-  output/              #   Generated reports and test results
-.harness/              # Agent constraint system (rules, runbooks, docs)
+generate-BIA-brief/    # Claude Code Skill package (self-contained)
+  SKILL.md             #   Skill definition — workflow steps for Claude Code
+  brief_cli.py         #   CLI entry point (index, postprocess, export subcommands)
+  config/              #   Skill-specific config (config.yaml.example)
+  src/Brief/           #   Subset of core modules (indexer, prompts, utils)
+  template/            #   Report templates
+  requirements.txt     #   Minimal dependencies for skill mode
+local_tests/           # Test scripts and logs (e.g. run_<project>_test.py, run_<project>_batch.py)
+  logs/                #   Per-project log files from batch runs
+run.py                 # Batch runner across all configured projects
+<project_name>/        # Example project folder (e.g. fudan_mouse_25, imu_20)
+  pics/                #   Figures
+  scripts/             #   Analysis scripts
+  tables/              #   Supplementary tables
+  output/              #   Generated reports (report.md/.pdf/.tex, index.md)
+output/                # Default output location when running from repo root
 ```
 
 ## Platform Support
@@ -73,6 +83,14 @@ The human-in-the-loop (HITL) review step uses platform-specific timeout mechanis
 - **Windows**: `threading.Timer` (since `SIGALRM` is not available on Windows)
 
 Platform detection is automatic via `sys.platform` — no configuration needed.
+
+### Bypassing HITL for batch runs
+
+Set `BRIEF_AUTO_APPROVE=1` to skip interactive review prompts entirely. Used by `run_fudan_mouse_batch.py` to run multiple projects in parallel as independent subprocesses without blocking on stdin.
+
+```bash
+BRIEF_AUTO_APPROVE=1 python run.py
+```
 
 ## Installation
 
@@ -129,9 +147,50 @@ brief = Brief(
 report_md, report_dict = brief.Run(
     background="Describe research background, analysis goals, and data context.",
     output_lang="zh-CN",
+    custom_title="单细胞转录组分析报告",  # optional, overrides agent-generated title
 )
 
 print(report_md)
+```
+
+## generate-BIA-brief: Skill & CLI
+
+The `generate-BIA-brief/` folder is a self-contained package that can be used in two ways:
+
+### As a Claude Code Skill
+
+Copy the folder into your project or register it as a skill, then invoke with `/brief` in Claude Code:
+
+```bash
+# Option A: Copy generate-BIA-brief/ into your project, then in Claude Code:
+/brief
+
+# Option B: Register as a global skill by symlinking to ~/.claude/skills/
+ln -s /path/to/BIA-Brief/generate-BIA-brief ~/.claude/skills/generate-BIA-brief
+```
+
+The [SKILL.md](generate-BIA-brief/SKILL.md) defines a 9-step workflow that Claude Code orchestrates through its tool system — environment check, indexer, HITL review, report assembly, and export — all without writing Python code.
+
+### As a standalone CLI
+
+`brief_cli.py` is a standard Python CLI with three subcommands. No Claude Code required:
+
+```bash
+# 1. Run indexer — scan pics/scripts, generate captions via multimodal LLM
+python brief_cli.py index ./my_project --config config/config.yaml --background "研究背景..." --lang zh-CN
+
+# 2. Post-process — embed figures, renumber, wrap paragraphs
+python brief_cli.py postprocess --input output/report.md --index index.md --lang zh-CN
+
+# 3. Export — template rendering + PDF + LaTeX
+python brief_cli.py export --input output/report.md --template template/repo_temp.md --title "报告标题" --lang zh-CN
+```
+
+Install dependencies first:
+
+```bash
+pip install -r generate-BIA-brief/requirements.txt
+playwright install chromium   # for PDF export
 ```
 
 ## Input Folder Convention
@@ -140,26 +199,33 @@ The `PROJECT_PATH` is treated as the project root and is expected to contain:
 
 ```text
 your_project/
-  pics/               # Required — contains 
-  scripts/            # Optional — analysis script (first found is used)
-    scanpy_ppl.py
+  pics/               # Required — figures (.png/.jpg/.jpeg/.webp), optionally under pics/figures/
+  scripts/            # Optional — analysis scripts (.py/.R)
+  tables/             # Optional — supplementary tables referenced by the report
 ```
 
 ## Local Tests
 
-```bash
-# End-to-end scRNA-seq report generation (8 figures)
-python local_tests/fudan.py
+Test scripts follow the naming pattern `run_<project>_test.py` (single-project) or `run_<project>_batch.py` (parallel batch). For example:
 
-# Caption-only test (indexer only, uses cache on second run)
-python local_tests/generate_caption_test.py
+```bash
+# Single-project end-to-end test
+python local_tests/run_imu20_test.py
+
+# Parallel batch run (auto-approves HITL via BRIEF_AUTO_APPROVE=1)
+python local_tests/run_fudan_mouse_batch.py
+
+# Batch run across all configured projects
+python run.py
 ```
 
-Outputs are written to `local_tests/output/`:
+Each project writes output to its own `<project>/output/` directory:
 - `report.md` — generated Markdown report
 - `report.pdf` — PDF export
 - `report.tex` — LaTeX export (compile with `xelatex report.tex`)
-- `*_result.json` — test summary with timing and status
+- `index.md` — indexer output with figure captions and analysis pipeline
+
+Batch runs write per-project logs to `local_tests/logs/<project_id>.log`.
 
 ## PDF Export
 
@@ -205,15 +271,22 @@ The final report includes a two-level table of contents, inline figures, citatio
 
 Templates use `{{Placeholder}}` syntax. The engine at [parse_md_template.py](src/Brief/utils/parse_md_template.py) performs a single pass of regex substitution on the template file, replacing every `{{Placeholder}}` with its string value.
 
-The body content with all figures, analysis text, discussion, conclusion, and references is generated by the LLM and injected wholesale into `{{Body_Content}}`. The cover area has a few dedicated placeholders:
+The body content with all figures, analysis text, discussion, conclusion, and references is generated by the LLM and injected wholesale into `{{Body_Content}}`. The cover area and front matter use dedicated placeholders:
 
 | Placeholder | Source |
 |-------------|--------|
 | `{{Body_Content}}` | LLM-generated report body (full HTML) |
-| `{{Cover_Report_Title}}` | Report title from agent's output |
+| `{{Cover_Report_Title}}` | Report title from agent's output (or `custom_title` arg) |
 | `{{Cover_Report_Date}}` | Current date (`datetime.now().strftime("%Y-%m-%d")`) |
 | `{{Cover_Image_Path}}` | Relative path to `template/BGI_SY/pics/cover.png` |
 | `{{Cover_Copyright_Text}}` | Default: `©2026All Rights Reserved` |
+| `{{Project_ID}}` | Left empty (present in template front matter, not auto-populated) |
+| `{{Table_Project_Info}}` | Left empty (intended for manual project info) |
+| `{{Table_QC}}` | Left empty (intended for QC statistics) |
+| `{{Table_Mapping}}` | Left empty (intended for mapping statistics) |
+| `{{Table_Gene_Capture}}` | Left empty (intended for gene capture statistics) |
+
+Note: The `Project_ID` and `Table_*` placeholders are present in the template front matter but are not auto-populated by the current pipeline. They render as empty sections, intended for manual completion of sample-level statistics.
 
 ## Dependencies
 

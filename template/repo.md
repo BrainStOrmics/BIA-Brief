@@ -246,7 +246,6 @@ table.report-table td,
 }
 </style>
 
-
 <!-- __BODY_START__ -->
 
 <section class='toc-block'>
@@ -257,77 +256,77 @@ table.report-table td,
 <span class='toc-page'>2</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;1 技术简介</span>
+<span class='toc-item'>  1 技术简介</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>2</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;2 项目信息</span>
+<span class='toc-item'>  2 项目信息</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>2</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;3 测序结果</span>
+<span class='toc-item'>  3 测序结果</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>2</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;3.1 下机数据质控</span>
+<span class='toc-item'>  3.1 下机数据质控</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>2</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;3.2 基因组比对</span>
+<span class='toc-item'>  3.2 基因组比对</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>3</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;3.3 基因表达定量</span>
+<span class='toc-item'>  3.3 基因表达定量</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>3</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;4 数据标准化</span>
+<span class='toc-item'>  4 数据标准化</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>3</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;5 高变基因选择和PCA降维</span>
+<span class='toc-item'>  5 高变基因选择和PCA降维</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>5</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;5.1 高变特征筛选</span>
+<span class='toc-item'>  5.1 高变特征筛选</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>5</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;5.2 主成分分析</span>
+<span class='toc-item'>  5.2 主成分分析</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>5</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;6 单样本分析</span>
+<span class='toc-item'>  6 单样本分析</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>7</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;6.1 细胞聚类</span>
+<span class='toc-item'>  6.1 细胞聚类</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>7</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;6.2 Marker基因鉴定</span>
+<span class='toc-item'>  6.2 Marker基因鉴定</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>8</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'>&emsp;7 拟时序分析</span>
+<span class='toc-item'> 7 拟时序分析</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>10</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'>&emsp;8 差异基因表达GO和pathway功能分析</span>
+<span class='toc-item'> 8 差异基因表达GO和pathway功能分析</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>11</span>
 </div>
@@ -337,57 +336,57 @@ table.report-table td,
 <span class='toc-page'>11</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'>&emsp;1 项目流程</span>
+<span class='toc-item'> 1 项目流程</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>11</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'>&emsp;2 实验流程</span>
+<span class='toc-item'> 2 实验流程</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>11</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;2.1 华大DNBelab C4单细胞技术原理</span>
+<span class='toc-item'>  2.1 华大DNBelab C4单细胞技术原理</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>11</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;2.2 测序文库结构</span>
+<span class='toc-item'>  2.2 测序文库结构</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>12</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'>&emsp;3 信息分析流程</span>
+<span class='toc-item'> 3 信息分析流程</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>12</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;3.1 表达矩阵生成</span>
+<span class='toc-item'>  3.1 表达矩阵生成</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>12</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;3.2 数据质控和过滤</span>
+<span class='toc-item'>  3.2 数据质控和过滤</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>12</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;3.3 高变特征筛选</span>
+<span class='toc-item'>  3.3 高变特征筛选</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>13</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;3.4 细胞聚类</span>
+<span class='toc-item'>  3.4 细胞聚类</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>13</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;3.5 cluster中特异marker基因筛选</span>
+<span class='toc-item'>  3.5 cluster中特异marker基因筛选</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>13</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;3.6 分析软件说明</span>
+<span class='toc-item'>  3.6 分析软件说明</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>13</span>
 </div>
@@ -397,12 +396,12 @@ table.report-table td,
 <span class='toc-page'>13</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'>&emsp;1 测序下机数据格式</span>
+<span class='toc-item'> 1 测序下机数据格式</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>13</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'>&emsp;2 文件交付</span>
+<span class='toc-item'> 2 文件交付</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>13</span>
 </div>
@@ -622,21 +621,13 @@ table.report-table td,
 
 <p style='text-indent:18.20pt'>对单个样品的不同文库分别质控， 满足质控标准后合并用于后续分析。 通过可视化细胞的基因分布图， UMI分布图， 可以评估每个样品的细胞活性及基因表达况。线粒体RNA比例， RNA数量和表达量在一定程度上可以反映出细胞活性和质量。 一般来说， 线粒体RNA比例越低、 RNA数量越多、 RNA表达量越高的细胞， 其活性和质量越好。</p>
 
-
-
 ![图 2](BGI_SY/repo-temp-pics/2.png)
-
-
 
 <p align='center'>图2 mRNA和线粒体RNA相关性散点图。</p>
 
 <p align='center'>X 轴 mRNA 表达量，Y 轴表示基因表达的数量。图中数字表示相关性系数。</p>
 
-
-
 ![图 1](BGI_SY/repo-temp-pics/1.png)
-
-
 
 <p align='center'>图3 QC小提琴图。</p>
 
@@ -650,11 +641,7 @@ table.report-table td,
 
 <p style='text-indent:18.20pt'>我们会利用每个样本基于所有基因平均值和分散度（均值和方差）筛选出那些在数据中呈现高变异度的基因，用于下游的 PCA 分析。默认挑选变异程度最高 的 2000 个基因。每个基因分散度的计算方法：基于所有基因的平均表达量将基因划分到 20 个区间，每个区间内基因均值的方差和中位值方差之差的绝对值即为该群基因的分散度的归一化值。</p>
 
-
-
 ![图 3](BGI_SY/repo-temp-pics/3.png)
-
-
 
 <p align='center'>图4 高变基因筛选图。</p>
 
@@ -664,11 +651,7 @@ table.report-table td,
 
 <p style='text-indent:18.20pt'>维度热图展示了主成分（ PC） 的变异最大的基因和及其表达量在细胞数据中的异质性， 有助于选择合适的维度进行下游分析。 同时也可以采用折线图 (elbow plot) 决定使用多少个PC来聚类， 以便捕捉到数据中大部分的变化，从本质上说，弯头出现的地方通常是识别大多数变异的阈值。</p>
 
-
-
 ![图 4](BGI_SY/repo-temp-pics/4.png)
-
-
 
 <p align='center'>图5 Top50 PC的elbow plot图。 </p>
 <p align='center'> X轴为PC序号， Y轴为标准差。</p>
@@ -679,40 +662,25 @@ table.report-table td,
 
 <p style='text-indent:18.20pt'>首先使用PCA对基因的表达矩阵进行降维处理， 之后使用UMAP进行细胞聚类， 生成细胞聚类结果见图6。 该图中每个点代表一个细胞， 空间距离近的点表示这些细胞的基因表达模式比较接近； 颜色根据graph-based聚类算法得到的分类决定， 算法认为同一个cluster内的细胞， 基因表达模式最接近。</p>
 
-
-
 ![图 6](BGI_SY/repo-temp-pics/6.png)
-
-
 
 <p align='center'>图6 不同分辨率下细胞分群的结果。</p>
 
-
-
 ![图 5](BGI_SY/repo-temp-pics/5.png)
-
 
 <p align='center'>图7 Leiden算法细胞聚类，分辨率为0.30UMAP图。</p>
 
 #### 6.2 Marker基因鉴定
 
-<p style='text-indent:18.00pt'>使用scanpy分别计算每一类细胞与其他类群的差异表达基因(marker 基因)，筛选矫正后p-value&lt;0.05且log2FC(log2 fold change:用于评估平均表达量差异倍数)top10 marker基因用于后续结果可视化。对得到的Marker基因，统计其在不同细胞类群中的表达情况。</p>
-
-
+<p style='text-indent:18.00pt'>使用scanpy分别计算每一类细胞与其他类群的差异表达基因(marker 基因)，筛选矫正后p-value<0.05且log2FC(log2 fold change:用于评估平均表达量差异倍数)top10 marker基因用于后续结果可视化。对得到的Marker基因，统计其在不同细胞类群中的表达情况。</p>
 
 ![图 7](BGI_SY/repo-temp-pics/7.png)
-
-
 
 <p align='center'>图8 scanpy 差异基因top 34 cluster marker gene 注释总表部分结果展示。</p>
 
 <p align='center'>横轴为排序情况;纵轴表示每一个基因的得分。</p>
 
-
-
 ![图 8](BGI_SY/repo-temp-pics/8.png)
-
-
 
 <p align='center'>图9 Marker基因表达特征图。</p>
 
@@ -720,11 +688,7 @@ table.report-table td,
 
 <p style='text-indent:18.20pt'>细胞轨迹推断（Cell Trajectory Inference），也称为<strong>伪时序分析（Pseudotime Analysis）</strong>，是单细胞组学（如单细胞RNA测序）中的核心计算方法。它的核心作用在于从静态的单细胞数据中重构细胞随时间的动态变化过程，揭示细胞状态如何连续演变（如分化、激活、转化或响应刺激），从而理解生物过程的连续性机制。使用scanpy进行细胞轨迹分析，直接观察不同细胞群之间的轨迹交流情况。可以观察到，一些cluster之间有着较为明显的发育轨迹联系，暗示着一些生物学过程在细胞针对疾病等外界刺激后或者自身分化中发生，这些信息能够为我们解析细胞发育过程提供重要的参考（图 10）</p>
 
-
-
 ![图 9](BGI_SY/repo-temp-pics/9.png)
-
-
 
 <p align='center'>图10 scanpy 细胞群轨迹分析可视化。</p>
 
@@ -848,7 +812,7 @@ table.report-table td,
 <div class='textbox-block'><pre>DP8400023715TLL100000562/2 #序列ID CTTCTGATATACAATCTTAATTTTTGTTTTGTAATTTAAACTTAATAAGTATTTGCCAAAAAATAAAAAAAAAATAAAAAATTAAAAAAAAAAAA
 #序列碱基
 +
-FGHEG5%GDDH9GGGGEF.9G3I:C&#x27;GFF?)-4&#x27;GAIDFG/4IGH=HIFG #序列碱基质量值</pre></div>
+FGHEG5%GDDH9GGGGEF.9G3I:C'GFF?)-4'GAIDFG/4IGH=HIFG #序列碱基质量值</pre></div>
 
 ### 2 文件交付
 
@@ -954,7 +918,6 @@ FGHEG5%GDDH9GGGGEF.9G3I:C&#x27;GFF?)-4&#x27;GAIDFG/4IGH=HIFG #序列碱基质量
 <td colspan='5'><p><span style='font-size:8.5pt'>|</span><span style='font-size:8.5pt'>-- </span><span style='font-size:8.5pt'>report.pdf</span><span style='font-size:8.5pt'>	</span><span style='font-size:8.5pt'>Pdf</span><span style='font-size:8.5pt'>版报告</span></p></td>
 </tr>
 </table>
-
 
 <div class='faq-title'><span class='faq-dot' aria-hidden='true'></span><span class='faq-text'>常见问题</span></div>
 

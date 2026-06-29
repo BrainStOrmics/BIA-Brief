@@ -91,6 +91,17 @@ def render_report_markdown(
         report_template_text,
     )
 
+    # Rewrite template-relative static image paths (./BGI_SY/...) to output-relative
+    # paths so they resolve correctly from the rendered report's location.
+    # In the template file itself, ./BGI_SY/ works (relative to template/).
+    # After rendering to <project>/output/report.md, ./BGI_SY/ would break, so
+    # we rewrite it to the correct relative path from the output directory.
+    bgi_sy_rel = _relative_path_from_report(
+        str(repo_root / "template" / "BGI_SY"), report_output_dir
+    )
+    report_md = report_md.replace("./BGI_SY/", f"{bgi_sy_rel}/")
+
+
     report_dict: dict[str, Any] = {
         "project_id": project_id,
         "project_path": project_path,

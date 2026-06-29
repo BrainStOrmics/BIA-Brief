@@ -528,10 +528,10 @@ def collect_heading_pages(html_path: Path) -> list[dict[str, int | str]]:
         heading_data = page.evaluate(
             f"""() => {{
                 const pageHeight = {PAGE_CONTENT_HEIGHT_PX};
-                const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,.analysis-title,.method-title,.faq-title,.ref-title'))
+                const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,.analysis-title,.method-title,.help-title,.faq-title,.ref-title'))
                     .filter(el => !el.closest('.toc-block') && !el.closest('.cover-wrapper'))
                     .map(el => {{
-                        const textEl = el.querySelector('.analysis-text,.method-text,.faq-text,.ref-text') || el;
+                        const textEl = el.querySelector('.analysis-text,.method-text,.help-text,.faq-text,.ref-text') || el;
                         const text = (textEl.textContent || '').replace(/\\s+/g, ' ').trim();
                         const rect = el.getBoundingClientRect();
                         return {{
@@ -549,18 +549,44 @@ def collect_heading_pages(html_path: Path) -> list[dict[str, int | str]]:
     return heading_data
 
 
-def replace_toc_page_numbers(body_html: str, page_numbers: list[int]) -> str:
-    toc_page_pattern = re.compile(r"<span class='toc-page'>(.*?)</span>")
-    page_iter = iter(page_numbers)
+def replace_toc_page_numbers(body_html: str, heading_data: list[dict]) -> str:
+    """Replace TOC page numbers by matching TOC item text with heading text.
+
+    Text-based matching handles missing sections (e.g., section 8 absent when
+    no enrichment figures exist) — unmatched TOC lines are removed entirely
+    so the TOC only lists sections that actually appear in the body.
+    """
+    # Build normalized heading text → page map
+    def _norm_key(text: str) -> str:
+        # Strip HTML entities for spaces, actual whitespace, CJK compat normalize
+        for ent in ("&emsp;", "&ensp;", "&nbsp;", "&#160;"):
+            text = text.replace(ent, "")
+        text = text.replace(" ", "").replace("　", "").replace(" ", "").replace("\t", "")
+        text = re.sub(r"\s+", "", text)
+        return _normalize_cjk_compat(text)
+
+    heading_map: dict[str, int] = {}
+    for item in heading_data:
+        key = _norm_key(item["text"])
+        if key and key not in heading_map:
+            heading_map[key] = item["page"]
+
+    # Match each TOC line by its item text; remove lines with no match
+    toc_line_pattern = re.compile(
+        r"(<div class='toc-line[^']*'>\s*<span class='toc-item'>)(.*?)(</span>\s*<span class='toc-dots'[^>]*></span>\s*<span class='toc-page'>)[^<]*(</span>\s*</div>)",
+        re.DOTALL,
+    )
 
     def repl(match: re.Match[str]) -> str:
-        try:
-            page_number = next(page_iter)
-        except StopIteration:
-            return match.group(0)
-        return f"<span class='toc-page'>{page_number}</span>"
+        item_text = match.group(2)
+        key = _norm_key(item_text)
+        if key in heading_map:
+            page = heading_map[key]
+            return f"{match.group(1)}{item_text}{match.group(3)}{page}{match.group(4)}"
+        # No matching heading — remove this TOC line
+        return ""
 
-    return toc_page_pattern.sub(repl, body_html)
+    return toc_line_pattern.sub(repl, body_html)
 
 
 def _normalize_cjk_compat(text: str) -> str:
@@ -822,7 +848,7 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
                     temp_cover_html.unlink()
 
         if toc_body_html:
-            # Measure heading positions from content-only rendering
+            # Build content HTML
             content_full_html = build_html_document(
                 content_body_html,
                 bg_uri,
@@ -831,13 +857,28 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
             )
             temp_html.write_text(content_full_html, encoding="utf-8")
 
+            # Step 1: Collect heading texts (page numbers from continuous layout
+            # are inaccurate when page-break divs are present, so we only use texts)
             heading_data = collect_heading_pages(temp_html)
-            toc_page_numbers = [item["page"] for item in heading_data]
+            heading_texts = [item["text"] for item in heading_data if item.get("text")]
 
-            if toc_page_numbers:
-                toc_body_html = replace_toc_page_numbers(toc_body_html, toc_page_numbers)
+            # Step 2: Render content to PDF FIRST (so we can measure actual pagination)
+            _render_html_to_pdf(temp_html, content_pdf, show_page_numbers=True)
+            if has_bg:
+                _add_background_to_pdf(content_pdf, bg_pdf)
 
-            # Render TOC PDF (no footer page numbers)
+            # Step 3: Get ACTUAL page numbers from the rendered content PDF
+            if heading_texts and content_pdf.exists():
+                actual_pages = collect_heading_pages_from_pdf(content_pdf, heading_texts)
+                for i, page in enumerate(actual_pages):
+                    if i < len(heading_data) and page is not None:
+                        heading_data[i]["page"] = page
+
+            # Step 4: Update TOC with accurate page numbers (text-based matching)
+            if heading_data:
+                toc_body_html = replace_toc_page_numbers(toc_body_html, heading_data)
+
+            # Step 5: Render TOC PDF (no footer page numbers)
             toc_full_html = build_html_document(
                 toc_body_html,
                 bg_uri,
@@ -848,12 +889,6 @@ def build_pdf_from_markdown(md_path: Path, output_pdf: Path) -> None:
             _render_html_to_pdf(temp_html, toc_pdf, show_page_numbers=False)
             if has_bg:
                 _add_background_to_pdf(toc_pdf, bg_pdf)
-
-            # Render content PDF (with footer page numbers, starting at 1)
-            temp_html.write_text(content_full_html, encoding="utf-8")
-            _render_html_to_pdf(temp_html, content_pdf, show_page_numbers=True)
-            if has_bg:
-                _add_background_to_pdf(content_pdf, bg_pdf)
         else:
             # No TOC — render entire body as one PDF with page numbers
             temp_html.write_text(

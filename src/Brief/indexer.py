@@ -38,14 +38,34 @@ def _compute_cache_key(background: str, output_lang: str, output_path: str = "")
     return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
+def _find_pics_search_dir(project_path: Path) -> Path | None:
+    """Locate the directory containing analysis figures for a project.
+
+    Searches in priority order:
+      1. <project>/pics/figures/
+      2. <project>/pics/
+      3. <project>/figures/
+
+    Returns None if no candidate directory exists.
+    """
+    pics_dir = project_path / "pics"
+    if pics_dir.exists():
+        figures_sub = pics_dir / "figures"
+        if figures_sub.exists() and figures_sub.is_dir():
+            return figures_sub
+        return pics_dir
+    figures_dir = project_path / "figures"
+    if figures_dir.exists() and figures_dir.is_dir():
+        return figures_dir
+    return None
+
+
 def _get_source_mtime(project_path: Path) -> float:
     """Get the maximum modification time of all source files (pics + scripts)."""
     max_mtime = 0.0
 
-    pics_dir = project_path / "pics"
-    if pics_dir.exists():
-        figures_dir = pics_dir / "figures"
-        search_dir = figures_dir if figures_dir.exists() and figures_dir.is_dir() else pics_dir
+    search_dir = _find_pics_search_dir(project_path)
+    if search_dir is not None:
         for f in search_dir.rglob("*"):
             if f.is_file() and f.suffix.lower() in PIC_EXTS:
                 max_mtime = max(max_mtime, f.stat().st_mtime)
@@ -139,12 +159,12 @@ def _discover_project_files(project_path: Path) -> tuple[list[str], list[str]]:
     Images are sorted by analysis workflow order (QC → HVG → PCA → Clustering →
     Markers → Annotation → PAGA), not alphabetically.
     """
-    pic_dir = project_path / "pics"
-    if not pic_dir.exists() or not pic_dir.is_dir():
-        raise FileNotFoundError(f"Could not find picture directory: {pic_dir}")
-
-    figures_dir = pic_dir / "figures"
-    pic_search_dir = figures_dir if figures_dir.exists() and figures_dir.is_dir() else pic_dir
+    pic_search_dir = _find_pics_search_dir(project_path)
+    if pic_search_dir is None or not pic_search_dir.exists():
+        raise FileNotFoundError(
+            f"Could not find picture directory under {project_path} "
+            f"(looked for pics/, pics/figures/, figures/)"
+        )
 
     all_pics = [
         p for p in pic_search_dir.rglob("*")
@@ -155,7 +175,7 @@ def _discover_project_files(project_path: Path) -> tuple[list[str], list[str]]:
     pic_abs_dirs = [str(p.resolve()) for p in all_pics]
 
     if not pic_abs_dirs:
-        raise FileNotFoundError(f"No image files found in {pic_dir}")
+        raise FileNotFoundError(f"No image files found in {pic_search_dir}")
 
     script_dir = project_path / "scripts"
     script_abs_dirs: list[str] = []
