@@ -17,6 +17,6 @@ llm_config:
 
 brief_config:
   PROJECT_ID: "p01"
-  PROJECT_PATH: ""          # Root dir containing pics/ and scripts/
-  REPORT_TEMPLATE: "template/repo_temp.md"
+  PROJECT_PATH: ""          # Root dir containing pics/ or figures/, and optional scripts/
+  REPORT_TEMPLATE: "templates/scRNA/report.md"
   OUTPUT_DIR: "output"

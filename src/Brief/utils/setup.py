@@ -1,5 +1,6 @@
 import os 
 import subprocess
+import shutil
 from pathlib import Path
 
 from langchain_openai import ChatOpenAI
@@ -69,9 +70,14 @@ def setup_brief(
         ):
     # Load config
     if config_yaml == 'DEFAULT':
-        load_yaml_config(
-            os.path.join(current_file_path.parents[1],"config/config.yaml")
-        )
+        config_path = current_file_path.parents[1] / "config" / "config.yaml"
+        example_path = current_file_path.parents[1] / "config" / "config.yaml.example"
+        if not config_path.exists():
+            if not example_path.exists():
+                raise FileNotFoundError(f"Missing config template: {example_path}")
+            shutil.copy2(example_path, config_path)
+            print(f"Created config from template: {config_path}")
+        load_yaml_config(str(config_path))
         
     else: 
         try:
@@ -89,8 +95,8 @@ def setup_brief(
 
     # 1. LLM model status
     print("\n[LLM MODELS]")
-    print(f"  Chat Model: {'✅ Initialized' if llm_config.MODELS['chat_model'] else '❌ Failed'}")
-    print(f"  Multimoda Chat Model: {'✅ Initialized' if llm_config.MODELS['mmchat_model'] else '❌ Failed'}")
+    print(f"  Chat Model: [{'OK' if llm_config.MODELS['chat_model'] else 'FAIL'}] {'Initialized' if llm_config.MODELS['chat_model'] else 'Failed'}")
+    print(f"  Multimoda Chat Model: [{'OK' if llm_config.MODELS['mmchat_model'] else 'FAIL'}] {'Initialized' if llm_config.MODELS['mmchat_model'] else 'Failed'}")
     
     print("\n" + "="*50 + "\n")
     print("System initialization complete..")

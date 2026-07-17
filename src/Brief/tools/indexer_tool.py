@@ -8,13 +8,13 @@ from langchain_core.language_models import LanguageModelLike
 from langchain_core.tools import tool
 from langgraph.types import interrupt
 
-from ..config.config import brief_config
 from ..indexer import index_project
 
 
 def create_indexer_tool(
     chat_model: LanguageModelLike,
     mmchat_model: LanguageModelLike,
+    project_path: str,
 ) -> Callable:
     """Create a tool that runs the indexer and returns the index.md path."""
 
@@ -30,7 +30,6 @@ def create_indexer_tool(
         Returns:
             The absolute path to the generated index.md file.
         """
-        project_path = brief_config.PROJECT_PATH
         index_path = index_project(
             project_path=project_path,
             mmchat_model=mmchat_model,

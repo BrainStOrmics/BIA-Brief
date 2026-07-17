@@ -1,305 +1,284 @@
 # BIA-Brief
 
-Automated bioinformatics report generation system. BIA-Brief takes figures, analysis scripts, and research background, then produces a professional-grade Markdown report (with optional PDF export) in English or Chinese.
+**Automated bioinformatics report generation from analysis outputs.** BIA-Brief transforms project figures, scripts, and metadata into structured, publication-ready reports in Markdown, PDF, and LaTeX — with minimal manual effort.
 
-Optimized for single-cell / single-nucleus transcriptomics projects, but adaptable to any bioinformatics domain.
+Optimized for single-cell / single-nucleus transcriptomics (scRNA-seq, snRNA-seq), with pluggable template support for spatial transcriptomics, custom pipelines, and more.
+
+[中文版](README.zh-CN.md)
+
+---
+
+## Features
+
+- :rocket: **End-to-end automation** — from raw analysis figures to final PDF in a single command
+- :eye: **Multi-modal Indexer** — vision-language model classifies figures by analysis step, generates captions and section summaries
+- :robot: **ReAct agent pipeline** — LangGraph-based agent with tool use, iterative refinement, and structured report writing
+- :busts_in_silhouette: **Human-in-the-Loop (HITL)** — optional interactive review at key stages (indexer output, report outline) with configurable timeout
+- :brain: **Smart background assembly** — structured `project_info.md` → standardized background text, with LLM auto-fill when fields are missing
+- :page_facing_up: **Multi-format export** — Markdown, PDF (Playwright Chromium), LaTeX (stdlib-only, `ctex` for Chinese)
+- :art: **Template system** — reusable templates with `{{Placeholder}}` substitution; built-in families for scRNA-seq, spatial, and standard output
+- :stethoscope: **Project health checks** — `doctor.py` validates environment, config, templates, and project structure in under one second
+- :runner: **Batch processing** — run multiple projects sequentially with auto-approve and centralized logging
+- :package: **Delivery management** — generated PDFs are automatically copied to a centralized `deliverables/` directory
+
+---
+
+## Repository layout
+
+```text
+src/Brief/               core library
+  ├── pipeline/          runner config & project info parser
+  ├── tools/             indexer, file ops, outline review
+  ├── utils/             post-process, PDF, LaTeX, template
+  ├── agent.py           LangGraph ReAct agent
+  ├── config/            model config & credentials
+  └── core.py            pipeline orchestrator
+scripts/                 entry points (run_project, run_batch, doctor)
+projects/<id>/           project inputs and generated outputs
+project_template/        starter skeleton for new projects
+templates/               report templates and shared assets
+  ├── scRNA/             single-cell transcriptomics
+  ├── spatial/           spatial transcriptomics
+  ├── standard/          standard Markdown output
+  └── assets/            shared branding elements
+docs/examples/           reference sample files
+generate-BIA-brief/      standalone skill/CLI package
+```
 
 ## Architecture
 
-```text
-Indexer → ReAct Agent (w/ HITL interrupts) → Post-process → PDF
+```mermaid
+flowchart LR
+  A[Project files<br/>figures, scripts, tables] --> B[Indexer<br/>Vision-LLM]
+  B --> C[ReAct Agent<br/>LangGraph + HITL]
+  C --> D[Post-process<br/>embed, renumber, wrap]
+  D --> E["Template render<br/>{{Placeholder}}"]
+  E --> F[Export<br/>PDF / LaTeX]
 ```
 
-| Step | Model | Responsibility |
-|------|-------|----------------|
-| **Indexer** | Multimodal (vision) | Scans `pics/` and `scripts/`, classifies figures by analysis step, generates captions and section summaries in parallel |
-| **ReAct Agent** | Text (reasoning) | Reads index, follows guides, assembles full report — with HITL interrupts for human review |
-| **Post-process** | — (deterministic) | Paragraph wrapping, figure renumbering (fallback), template rendering |
-| **PDF export** | — (Playwright) | Converts rendered Markdown to PDF with cover page, TOC, and page numbers |
-| **LaTeX export** | — (stdlib) | Converts rendered Markdown to LaTeX with native `\tableofcontents` |
+| Stage | Component | What it does |
+|---|---|---|
+| :mag: **Indexer** | `tools/indexer_tool.py` | Scans `pics/` and `scripts/`, classifies each figure by analysis step (QC :arrow_right: HVG :arrow_right: PCA :arrow_right: Clustering :arrow_right: Markers :arrow_right: Annotation :arrow_right: PAGA), generates captions and section summaries via multi-modal LLM. Cached by SHA256 of background+language. |
+| :robot: **Agent** | `agent.py` | LangGraph `create_agent` with tools (`run_indexer`, `review_outline`, `read_file`, `write_file`, `create_task_list`, `mark_task_complete`). Reads `index.md`, follows prompt guides, writes report body into `{{Body_Content}}`. |
+| :busts_in_silhouette: **HITL** | `core.py` | Interrupt-based human review triggered inside `run_indexer` and `review_outline`. Threading.Timer (Windows) / SIGALRM (POSIX) with configurable timeout. Bypassed with `BRIEF_AUTO_APPROVE=1` for batch runs. |
+| :wrench: **Post-process** | `utils/postprocess.py` | Base64 figure embedding, automatic renumbering (start_index=2), paragraph wrapping. |
+| :framed_picture: **Template** | `utils/parse_md_template.py` | Single-pass regex substitution of `{{Placeholder}}` values. No Jinja2 dependency. |
+| :page_with_curl: **PDF** | `utils/md_to_pdf.py` | Playwright Chromium: cover page (no page numbers) + body (page numbers, watermark). TOC page numbers from heading positions. |
+| :memo: **LaTeX** | `utils/md_to_latex.py` | Stdlib-only converter. `ctex` for Chinese. Compile with `xelatex report.tex` (two passes for TOC). |
 
-## Project Layout
+---
 
-```text
-src/Brief/
-  core.py              # Main entry point — Brief class, orchestrates full pipeline
-  indexer.py           # Project scanner + analysis step classification + parallel caption/summary generation
-  agent.py             # ReAct agent definition (langchain.agents.create_agent)
-  config/              # Model and runtime configuration (YAML)
-    config.py          #   Config class definitions
-    config.yaml        #   Actual configuration (gitignored)
-    config.yaml.example #   Template config
-  tools/               # Generic tools available to the ReAct agent
-    file_ops.py        #   read_file, write_file
-    indexer_tool.py    #   run_indexer — calls index_project, triggers HITL interrupt
-    outline_review.py  #   review_outline — triggers HITL interrupt for outline approval
-    task_ops.py        #   create_task_list, mark_task_complete
-  prompts/             # LLM prompt templates
-    agent.md           #   Agent role and workflow steps
-    synthesist.md      #   Used by indexer for multimodal caption generation
-    thesis.md          #   Discussion/conclusion generation guide (agent reads at runtime)
-    report.md          #   Report assembly guide with section structure and citation rules
-    prompt_template.py #   Prompt loading utilities
-  utils/               # Helper utilities
-    filemanager.py     #   Image/script discovery under project path
-    io.py              #   File I/O utilities
-    md_to_pdf.py       #   Markdown-to-PDF converter (Playwright)
-    md_to_latex.py     #   Markdown-to-LaTeX converter (stdlib only)
-    parse_md_template.py  # Template placeholder substitution engine
-    postprocess.py     #   Figure embedding, renumbering, paragraph wrapping
-    setup.py           #   System initialization
-template/              # Report templates and cover assets
-  BGI_SY/              #   Commercial template pack
-    cover.md           #   Cover page template
-    pics/              #   Cover background / watermark images
-  repo.md              #   Commercial delivery template
-  repo_temp.md         #   Minimal working template
-  repo_temp_sc.md      #   scRNA-seq template (used in tests)
-  scRNA_base.md        #   scRNA-seq base template
-generate-BIA-brief/    # Claude Code Skill package (self-contained)
-  SKILL.md             #   Skill definition — workflow steps for Claude Code
-  brief_cli.py         #   CLI entry point (index, postprocess, export subcommands)
-  config/              #   Skill-specific config (config.yaml.example)
-  src/Brief/           #   Subset of core modules (indexer, prompts, utils)
-  template/            #   Report templates
-  requirements.txt     #   Minimal dependencies for skill mode
-local_tests/           # Test scripts and logs (e.g. run_<project>_test.py, run_<project>_batch.py)
-  logs/                #   Per-project log files from batch runs
-run.py                 # Batch runner across all configured projects
-<project_name>/        # Example project folder (e.g. fudan_mouse_25, imu_20)
-  pics/                #   Figures
-  scripts/             #   Analysis scripts
-  tables/              #   Supplementary tables
-  output/              #   Generated reports (report.md/.pdf/.tex, index.md)
-output/                # Default output location when running from repo root
-```
+## Requirements
 
-## Platform Support
+- :snake: Python 3.10+ with project dependencies installed
+- :globe_with_meridians: [Playwright Chromium](https://playwright.dev/python/) for PDF export (`playwright install chromium`)
+- :key: **OpenAI-compatible API endpoints** for both chat and multi-modal models (configured in `src/Brief/config/config.yaml`)
 
-BIA-Brief runs on both **Linux/macOS** and **Windows**.
+---
 
-The human-in-the-loop (HITL) review step uses platform-specific timeout mechanisms:
-- **Linux/macOS**: `signal.SIGALRM` for interrupt-based timeout
-- **Windows**: `threading.Timer` (since `SIGALRM` is not available on Windows)
+## Quick start
 
-Platform detection is automatic via `sys.platform` — no configuration needed.
-
-### Bypassing HITL for batch runs
-
-Set `BRIEF_AUTO_APPROVE=1` to skip interactive review prompts entirely. Used by `run_fudan_mouse_batch.py` to run multiple projects in parallel as independent subprocesses without blocking on stdin.
+### 1. Setup :wrench:
 
 ```bash
-BRIEF_AUTO_APPROVE=1 python run.py
-```
-
-## Installation
-
-Create a Python environment and install dependencies:
-
-```bash
+# Clone and install
 pip install -r requirements.txt
-
-# If using Playwright for PDF export, install the browser:
 playwright install chromium
+
+# Create config from template (edit with your API keys)
+cp src/Brief/config/config.yaml.example src/Brief/config/config.yaml
 ```
 
-If you use Conda, activate your environment first.
-
-## Configuration
-
-Model settings and project paths are in [src/Brief/config/config.yaml](src/Brief/config/config.yaml). Start from [config.yaml.example](src/Brief/config/config.yaml.example) if needed.
-
-### LLM Configuration
-
-- `CHAT_MODEL_API` — API key, base URL, and model name for the text/reasoning model
-- `MULTIMODAL_CHAT_MODEL_API` — configuration for the vision-capable model
-- `ENABLE_THINKING` — whether to enable model-side reasoning features
-- `ENABLE_SEARCH` — whether to enable web search (requires Tavily API key)
-
-### Brief Configuration
-
-- `PROJECT_PATH` — Root directory containing `pics/` and optional `scripts/`
-- `REPORT_TEMPLATE` — Path to the report template Markdown file
-- `OUTPUT_DIR` — Output directory (relative to `PROJECT_PATH`)
-- `PROJECT_ID` — Project identifier
-
-## Quick Start
-
-```python
-from Brief.utils.setup import setup_brief
-from Brief.config.config import llm_config, brief_config
-from Brief.core import Brief
-
-setup_brief()
-
-# Set project config
-brief_config.PROJECT_PATH = "/path/to/your_project"
-brief_config.REPORT_TEMPLATE = "template/repo_temp.md"
-brief_config.OUTPUT_DIR = "output"
-brief_config.PROJECT_ID = "p01"
-
-# Create and run
-brief = Brief(
-    chat_model=llm_config.MODELS["chat_model"],
-    mmchat_model=llm_config.MODELS["mmchat_model"],
-)
-
-report_md, report_dict = brief.Run(
-    background="Describe research background, analysis goals, and data context.",
-    output_lang="zh-CN",
-    custom_title="单细胞转录组分析报告",  # optional, overrides agent-generated title
-)
-
-print(report_md)
-```
-
-## generate-BIA-brief: Skill & CLI
-
-The `generate-BIA-brief/` folder is a self-contained package that can be used in two ways:
-
-### As a Claude Code Skill
-
-Copy the folder into your project or register it as a skill, then invoke with `/brief` in Claude Code:
+### 2. Prepare a project :open_file_folder:
 
 ```bash
-# Option A: Copy generate-BIA-brief/ into your project, then in Claude Code:
-/brief
+# Create from skeleton
+Copy-Item -Recurse project_template projects/my_project
 
-# Option B: Register as a global skill by symlinking to ~/.claude/skills/
-ln -s /path/to/BIA-Brief/generate-BIA-brief ~/.claude/skills/generate-BIA-brief
+# Or use an existing analysis folder with the following structure:
+# projects/my_project/
+#   ├── pics/            # analysis figures (required)
+#   ├── scripts/         # analysis scripts (optional)
+#   ├── tables/          # summary tables (optional)
+#   └── project_info.md  # project metadata (optional)
 ```
 
-The [SKILL.md](generate-BIA-brief/SKILL.md) defines a 9-step workflow that Claude Code orchestrates through its tool system — environment check, indexer, HITL review, report assembly, and export — all without writing Python code.
+### 3. Run health check :stethoscope:
 
-### As a standalone CLI
-
-`brief_cli.py` is a standard Python CLI with three subcommands. No Claude Code required:
-
-```bash
-# 1. Run indexer — scan pics/scripts, generate captions via multimodal LLM
-python brief_cli.py index ./my_project --config config/config.yaml --background "研究背景..." --lang zh-CN
-
-# 2. Post-process — embed figures, renumber, wrap paragraphs
-python brief_cli.py postprocess --input output/report.md --index index.md --lang zh-CN
-
-# 3. Export — template rendering + PDF + LaTeX
-python brief_cli.py export --input output/report.md --template template/repo_temp.md --title "报告标题" --lang zh-CN
+```powershell
+python scripts/doctor.py --project my_project
 ```
 
-Install dependencies first:
+### 4. Generate report :rocket:
 
-```bash
-pip install -r generate-BIA-brief/requirements.txt
-playwright install chromium   # for PDF export
+```powershell
+# Preview the background sent to the model
+python scripts/run_project.py my_project --print-background
+
+# Generate full report
+python scripts/run_project.py my_project
 ```
 
-## Input Folder Convention
+### 5. Output :tada:
 
-The `PROJECT_PATH` is treated as the project root and is expected to contain:
-
-```text
-your_project/
-  pics/               # Required — figures (.png/.jpg/.jpeg/.webp), optionally under pics/figures/
-  scripts/            # Optional — analysis scripts (.py/.R)
-  tables/             # Optional — supplementary tables referenced by the report
+```
+projects/my_project/output/
+├── report.md
+├── report.pdf
+├── report.tex
+└── index.md
 ```
 
-## Local Tests
+A copy of the final PDF is also placed in `deliverables/<report-title>.pdf`.
 
-Test scripts follow the naming pattern `run_<project>_test.py` (single-project) or `run_<project>_batch.py` (parallel batch). For example:
+---
 
-```bash
-# Single-project end-to-end test
-python local_tests/run_imu20_test.py
+## Project structure conventions
 
-# Parallel batch run (auto-approves HITL via BRIEF_AUTO_APPROVE=1)
-python local_tests/run_fudan_mouse_batch.py
-
-# Batch run across all configured projects
-python run.py
+```
+projects/<project_id>/
+├── pics/               # required — analysis figures (PNG, JPG, etc.)
+│   ├── violin_1_qc.png
+│   ├── scatter_2_qc.png
+│   ├── umap_6_leiden.png
+│   └── ...
+├── scripts/            # optional — analysis scripts (py, R, ipynb)
+│   ├── 1.datapp.py
+│   └── 2.anno.py
+├── tables/             # optional — CSV tables (table1_project_info.csv, etc.)
+│   ├── table1_project_info.csv
+│   └── table2_sequencing_quality.csv
+└── project_info.md     # optional — project metadata
 ```
 
-Each project writes output to its own `<project>/output/` directory:
-- `report.md` — generated Markdown report
-- `report.pdf` — PDF export
-- `report.tex` — LaTeX export (compile with `xelatex report.tex`)
-- `index.md` — indexer output with figure captions and analysis pipeline
+### `project_info.md` :memo:
 
-Batch runs write per-project logs to `local_tests/logs/<project_id>.log`.
+This file drives the background context passed to the report agent. Fields filled in by the user are used directly; empty fields are auto-generated by the LLM at runtime from available metadata.
 
-## PDF Export
+Recommended fields:
 
-PDF conversion runs automatically as the final step of report generation — the `.pdf` file is created alongside the Markdown output (same path, `.pdf` extension).
-
-The PDF pipeline:
-1. Splits the Markdown at `<!-- __BODY_START__ -->` into cover and body sections
-2. Renders cover page (without page numbers) as a separate PDF
-3. Measures heading positions to update table of contents page numbers
-4. Renders body content (with page numbers) and overlays a background watermark
-5. Merges cover + TOC + body into a single PDF
-
-## LaTeX Export
-
-LaTeX conversion runs automatically alongside PDF export — the `.tex` file is created alongside the Markdown output (same path, `.tex` extension).
-
-To compile the LaTeX file to PDF:
-```bash
-xelatex report.tex   # run twice for TOC generation
-xelatex report.tex
+```
+项目名称：Example single-cell project
+报告名称：Example scRNA-seq collaboration report
+合同编号：CONTRACT-2025-001
+物种：Mus musculus
+参考基因组：GRCm39
+样本数量：12
+测序技术：scRNA-seq
+项目简介：         ← optional — auto-filled by LLM if empty
+样本ID：
+SAMPLE001
+...
 ```
 
-The LaTeX pipeline:
-1. Converts cover HTML to `\begin{titlepage}` environment
-2. Uses LaTeX-native `\tableofcontents` (replaces HTML TOC block)
-3. Converts headings, figures, citations, references, lists, and tables to LaTeX
-4. Chinese text supported via `ctex` package
-5. No Python dependencies added — uses stdlib only
+Preview the assembled background without running the model:
 
-## Output
+```powershell
+python scripts/run_project.py my_project --print-background
+```
 
-The pipeline produces three layers of content:
+---
 
-1. **Captions** — per-figure title, axes/panel descriptions, and analysis step classification
-2. **Section summaries** — focused findings and biological interpretation per figure
-3. **Discussion + Conclusion + Key Takeaways** — higher-level synthesis across all sections
+## Runner commands
 
-Figures are automatically sorted by analysis pipeline order (QC → HVG → PCA → Clustering → Markers → Annotation → PAGA) rather than alphabetically, ensuring the report follows a logical analytical narrative.
+### Single project :arrow_forward:
 
-The final report includes a two-level table of contents, inline figures, citations with a curated bibliography, and a required section structure covering data QC through functional enrichment analysis.
+```powershell
+python scripts/run_project.py <project_id>
+python scripts/run_project.py D:/path/to/project --template templates/spatial/report.md
+```
 
-## Template System
+### Batch mode :arrows_counterclockwise:
 
-Templates use `{{Placeholder}}` syntax. The engine at [parse_md_template.py](src/Brief/utils/parse_md_template.py) performs a single pass of regex substitution on the template file, replacing every `{{Placeholder}}` with its string value.
+```powershell
+python scripts/run_batch.py --all
+python scripts/run_batch.py project_a project_b
+```
 
-The body content with all figures, analysis text, discussion, conclusion, and references is generated by the LLM and injected wholesale into `{{Body_Content}}`. The cover area and front matter use dedicated placeholders:
+### Key flags :flags:
 
-| Placeholder | Source |
-|-------------|--------|
-| `{{Body_Content}}` | LLM-generated report body (full HTML) |
-| `{{Cover_Report_Title}}` | Report title from agent's output (or `custom_title` arg) |
-| `{{Cover_Report_Date}}` | Current date (`datetime.now().strftime("%Y-%m-%d")`) |
-| `{{Cover_Image_Path}}` | Relative path to `template/BGI_SY/pics/cover.png` |
-| `{{Cover_Copyright_Text}}` | Default: `©2026All Rights Reserved` |
-| `{{Project_ID}}` | Left empty (present in template front matter, not auto-populated) |
-| `{{Table_Project_Info}}` | Left empty (intended for manual project info) |
-| `{{Table_QC}}` | Left empty (intended for QC statistics) |
-| `{{Table_Mapping}}` | Left empty (intended for mapping statistics) |
-| `{{Table_Gene_Capture}}` | Left empty (intended for gene capture statistics) |
+| Flag | Effect |
+|---|---|
+| `--template spatial` | Template key from `run_config.yaml` (scRNA, spatial, standard) |
+| `--lang en` | Output language |
+| `--background "..."` | Override the auto-built background text |
+| `--print-background` | Preview background without running the pipeline |
+| `--interactive-review` | Enable manual HITL review prompts |
+| `--no-delivery-copy` | Skip copying PDF to `deliverables/` |
+| `--config run_config.yaml` | Custom runner config path |
+| `--stop-on-failure` | (Batch) abort on first error |
 
-Note: The `Project_ID` and `Table_*` placeholders are present in the template front matter but are not auto-populated by the current pipeline. They render as empty sections, intended for manual completion of sample-level statistics.
+---
 
-## Dependencies
+## Templates :art:
 
-Key dependencies:
+Template families are grouped under `templates/`:
 
-- **LangChain / LangGraph** — ReAct agent orchestration
-- **OpenAI-compatible API** — text and multimodal models
-- **PyYAML** — configuration
-- **markdown + pypdf + playwright** — PDF export
-- **Pillow** — image handling
+```
+templates/
+├── scRNA/             # single-cell transcriptomics
+├── spatial/           # spatial transcriptomics
+├── standard/          # standard Markdown output
+└── assets/
+    └── BGI_SY/        # shared branding assets (covers, logos, workflow figures)
+```
 
-See [requirements.txt](requirements.txt) for the full list.
+Use `--template <key>` to select a template by name, or provide an explicit path:
 
-## Acknowledgements
+```powershell
+python scripts/run_project.py my_project --template spatial
+python scripts/run_project.py my_project --template templates/scRNA/report.md
+```
 
-Designed to automate bioinformatics report generation for early-stage project summaries, result organization, and manuscript drafting.
+---
+
+## Configuration: two-layer system :gear:
+
+| Layer | File | Purpose |
+|---|---|---|
+| **Runner** | `run_config.yaml` | Project root, default template/language, batch log dir, auto-approve behavior |
+| **Model** | `src/Brief/config/config.yaml` | API keys, base URLs, model names, thinking/search flags |
+
+`setup_brief()` auto-creates `config.yaml` from `config.yaml.example` on first run if it is missing. The runner config (`run_config.yaml`) ships with sensible defaults and can be overridden per invocation with `--config`.
+
+---
+
+## Typical workflow :dart:
+
+1. :open_file_folder: Place analysis figures in `projects/<project_id>/pics/`
+2. :pencil: (Optional) Fill in `project_info.md` — at minimum the species, sample count, and project name
+3. :key: Configure API credentials in `src/Brief/config/config.yaml`
+4. :stethoscope: Run `python scripts/doctor.py --project <project_id>` to verify readiness
+5. :eye: Preview the background: `python scripts/run_project.py <project_id> --print-background`
+6. :rocket: Generate report: `python scripts/run_project.py <project_id>`
+7. :white_check_mark: Review `projects/<project_id>/output/report.md` and the PDF in `deliverables/`
+
+---
+
+---
+
+## Notes :bookmark:
+
+- `generate-BIA-brief/` is a standalone skill/CLI package with its own copy of core modules. Changes to `src/Brief/` must be synced manually.
+- `logs/` and `deliverables/` are gitignored; `deliverables/` is auto-created at runtime.
+- Batch logs are written to `logs/batch/<timestamp>_<project>.log`.
+- The project template skeleton at `project_template/` includes `.gitkeep` files to preserve the directory structure.
+
+---
+
+## Troubleshooting :warning:
+
+| Symptom | Likely cause |
+|---|---|
+| :x: PDF export fails | Playwright Chromium not installed (`playwright install chromium`) |
+| :x: Doctor reports missing project | Project lacks `figures/` or `pics/` directory |
+| :x: Template not found | Wrong key or path — use `templates/scRNA/report.md`, `templates/spatial/report.md`, or `templates/standard/report.md` |
+| :x: Chinese text garbled in PDF | Missing Chinese font — ensure `ctex` LaTeX package or system CJK font |
+| :x: Indexer returns empty cache miss | Multi-modal model unavailable — check API key and base URL in `config.yaml` |
+| :x: GBK encoding error on Windows | Set `PYTHONIOENCODING=utf-8` or use a UTF-8 terminal |
+
+---
+
+## License
+
+See [LICENSE](LICENSE).

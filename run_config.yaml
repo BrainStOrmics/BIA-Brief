@@ -1,0 +1,15 @@
+runner:
+  projects_root: projects
+  project_output_dir: output
+  deliverables_dir: deliverables
+  batch_log_dir: logs/batch
+  default_template: scRNA
+  default_lang: zh-CN
+  auto_approve: true
+  project_input_dirs:
+    - figures
+    - pics
+  templates:
+    scRNA: templates/scRNA/report.md
+    spatial: templates/spatial/report.md
+    standard: templates/standard/report.md

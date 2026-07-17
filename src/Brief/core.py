@@ -16,7 +16,6 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Checkpointer, Command
 from langgraph.store.base import BaseStore
 
-from .config.config import brief_config
 from .agent import create_brief_agent, load_agent_prompt
 from .tools import create_tools, create_outline_review_tool
 from .tools.indexer_tool import create_indexer_tool
@@ -230,6 +229,11 @@ class Brief:
         background: str,
         output_lang: str,
         custom_title: str = "",
+        *,
+        project_path: str,
+        report_template: str,
+        output_dir: str,
+        project_id: str,
     ) -> tuple[str, dict[str, Any]]:
         """Run the report generation pipeline.
 
@@ -237,21 +241,20 @@ class Brief:
             background: Research background description.
             output_lang: Output language (e.g., "zh-CN", "en").
             custom_title: Optional custom report title. If provided, overrides the agent-generated title.
+            project_path: Optional project root containing images/scripts/tables.
+            report_template: Optional report template path.
+            output_dir: Optional report output directory name.
+            project_id: Optional project identifier.
 
         Returns:
             Tuple of (report_md, report_dict).
         """
-        project_path = brief_config.PROJECT_PATH
-        report_template = brief_config.REPORT_TEMPLATE
-        output_dir = brief_config.OUTPUT_DIR
-        project_id = brief_config.PROJECT_ID
-
         # Resolve output path
         output_path = str(Path(project_path) / output_dir / "report.md")
         index_path = str(Path(project_path) / "index.md")
 
         # Create tools: indexer + outline review + standard tools
-        indexer_tool = create_indexer_tool(self.chat_model, self.mmchat_model)
+        indexer_tool = create_indexer_tool(self.chat_model, self.mmchat_model, project_path)
         outline_review_tool = create_outline_review_tool()
         tools = [indexer_tool, outline_review_tool] + create_tools()
 
@@ -326,14 +329,10 @@ class Brief:
 
         # Step 5: Template rendering
         logger.info("Step 5: Rendering template...")
-        # Read title: use custom_title if provided, otherwise agent's output
+        # Title source: custom_title > project_info.md > project_id
         if custom_title:
             report_title = custom_title
-            # Also overwrite the .title file so downstream tools use it
-            title_path = Path(output_path + ".title")
-            title_path.write_text(report_title, encoding="utf-8")
         else:
-            # Priority: project_info.md > agent's .title file > default
             project_info_path = Path(project_path) / "project_info.md"
             report_title = ""
             if project_info_path.exists():
@@ -344,22 +343,14 @@ class Brief:
                             break
                 except Exception as e:
                     logger.warning("Failed to read project_info.md: %s", e)
-
             if not report_title:
-                # Fallback: agent's .title file
-                title_path = Path(output_path + ".title")
-                report_title = title_path.read_text(encoding="utf-8").strip() if title_path.exists() else ""
-
-            if not report_title:
-                # Final fallback
-                report_title = "生物信息学分析报告"
+                report_title = project_id
 
         template_fields_dict = build_template_fields({"body_md": report_md}, report_title=report_title)
 
         # Load project-specific table content (4 tables from <project_path>/table/)
         template_fields_dict.update(load_table_files(project_path))
 
-        project_root = Path(project_path).expanduser().resolve()
         report_output_path = Path(output_path)
         report_output_dir = report_output_path.parent
 

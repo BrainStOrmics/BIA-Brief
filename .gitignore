@@ -1,22 +1,58 @@
-local_tests/
+# Runtime config
 src/Brief/config/config.yaml
+!run_config.yaml
+
+# Generated report outputs
+projects/*/output/
+output/
+deliverables/
+logs/
+index.md
+*.log
+
+# Python cache and bytecode
 **/__pycache__/
+*.pyc
+
+# Local editor and agent state
 .vscode/
 .claude/
-*.yaml
-.github/
-pics/
-tables
-figures/
-project_info.md
-scripts/
-output/
-index.md
-template/BGI_SY/repo-temp-pics/
-**.docx
+.agents/
+.codex/
 .gstack/
-.harness/
-CLAUDE.md
 local_tmp/
-run.py
+.cache/
+
+# Generated data at repository root or in project folders
+local_tests/
+pics/
+figures/
+tables
+project_info.md
+projects/*/scripts/
 node_modules/
+**.docx
+
+# Reference examples are intentional documentation assets
+!docs/examples/
+!docs/examples/*.docx
+!docs/examples/*.pdf
+
+# Project template skeleton must stay tracked
+!project_template/
+!project_template/figures/
+!project_template/figures/.gitkeep
+!project_template/scripts/
+!project_template/scripts/.gitkeep
+!project_template/tables/
+!project_template/tables/.gitkeep
+!project_template/project_info.md
+
+# Repo-level tooling and docs kept local
+AGENT.md
+CLAUDE.md
+.github/
+.harness/
+
+# Template asset cache
+templates/assets/BGI_SY/repo-temp-pics/
