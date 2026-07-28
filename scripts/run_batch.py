@@ -13,6 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUN_PROJECT = REPO_ROOT / "scripts" / "run_project.py"
+sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from Brief.pipeline.runner_config import DEFAULT_CONFIG_PATH, load_runner_config
 

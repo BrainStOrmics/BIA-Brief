@@ -1,0 +1,100 @@
+name: Smoke CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Compile core modules and entry scripts
+        run: |
+          python -m py_compile \
+            scripts/doctor.py \
+            scripts/run_project.py \
+            scripts/run_batch.py \
+            src/Brief/pipeline/agent_runtime.py \
+            src/Brief/pipeline/project_info_background.py \
+            src/Brief/pipeline/runner_config.py
+
+      - name: Check CLI help
+        run: |
+          python scripts/doctor.py --help
+          python scripts/run_project.py --help
+          python scripts/run_batch.py --help
+
+      - name: Run runtime unit tests
+        run: |
+          python -m pytest -q tests/test_deepagents_runtime.py
+
+      - name: Check deterministic project background assembly
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from tempfile import TemporaryDirectory
+          from Brief.pipeline.project_info_background import build_project_background
+
+          with TemporaryDirectory() as tmp:
+              project = Path(tmp)
+              (project / "project_info.md").write_text(
+                  "\n".join([
+                      "项目名称：Example single-cell project",
+                      "报告名称：Example report",
+                      "物种：Mus musculus",
+                      "样本数量：12",
+                      "测序技术：scRNA-seq",
+                      "项目简介：测试标准化背景生成。",
+                      "样本ID：",
+                      "SAMPLE001",
+                  ]),
+                  encoding="utf-8",
+              )
+              background = build_project_background(project, "example")
+              assert "Example single-cell project" in background
+              assert "scRNA-seq" in background
+              assert "测试标准化背景生成" in background
+              assert "SAMPLE001" in background
+          PY
+
+      - name: Check repository structure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          required = [
+              "README.md",
+              "README.zh-CN.md",
+              "pyproject.toml",
+              "run_config.yaml",
+              "requirements.txt",
+              "project_template/project_info.md",
+              "templates/scRNA/report.md",
+              "templates/spatial/report.md",
+              "templates/standard/report.md",
+              "src/Brief/core.py",
+              "src/Brief/config/config.yaml.example",
+              "scripts/doctor.py",
+              "scripts/run_project.py",
+              "scripts/run_batch.py",
+          ]
+          missing = [path for path in required if not Path(path).exists()]
+          if missing:
+              raise SystemExit("Missing required files: " + ", ".join(missing))
+          PY

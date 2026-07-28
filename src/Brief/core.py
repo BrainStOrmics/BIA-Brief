@@ -16,9 +16,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Checkpointer, Command
 from langgraph.store.base import BaseStore
 
-from .agent import create_brief_agent, load_agent_prompt
-from .tools import create_tools, create_outline_review_tool
-from .tools.indexer_tool import create_indexer_tool
+from .pipeline.agent_runtime import build_report_agent, to_virtual_path
 from .utils.postprocess import (
     build_template_fields,
     embed_figures_in_body,
@@ -170,23 +168,18 @@ def _stream_and_print(
             if not isinstance(node_data, dict):
                 continue
             messages = node_data.get("messages", [])
-            if node_name == "model":
-                for msg in messages:
-                    if not isinstance(msg, AIMessage):
-                        continue
+            for msg in messages:
+                if isinstance(msg, AIMessage):
                     for tc in msg.tool_calls or []:
                         tool_id = tc.get("id", tc.get("tool_call_id", ""))
                         pending_tool_calls[tool_id] = tc["name"]
                         printer.handle_tool_call(tc["name"], tc.get("args", {}))
                     if not msg.tool_calls and msg.content:
                         printer.handle_ai_text(msg.content)
-            elif node_name == "tools":
-                for msg in messages:
-                    if not isinstance(msg, ToolMessage):
-                        continue
+                elif isinstance(msg, ToolMessage):
                     tool_id = msg.tool_call_id
                     tool_name = pending_tool_calls.pop(tool_id, "unknown")
-                    printer.handle_tool_result(tool_name, msg.content)
+                    printer.handle_tool_result(tool_name, str(msg.content))
 
 
 class Brief:
@@ -253,30 +246,33 @@ class Brief:
         output_path = str(Path(project_path) / output_dir / "report.md")
         index_path = str(Path(project_path) / "index.md")
 
-        # Create tools: indexer + outline review + standard tools
-        indexer_tool = create_indexer_tool(self.chat_model, self.mmchat_model, project_path)
-        outline_review_tool = create_outline_review_tool()
-        tools = [indexer_tool, outline_review_tool] + create_tools()
-
-        # Create agent with HITL (interrupt triggered inside run_indexer tool)
-        logger.info("Creating ReAct agent with HITL interrupt...")
+        # DeepAgents owns filesystem, todo, and task tools. Business tools and
+        # their post-action HITL interrupts are assembled in one runtime seam.
+        logger.info("Creating DeepAgents report agent with HITL interrupt...")
         checkpointer = self.checkpointer or MemorySaver()
-        agent = create_brief_agent(
+        repo_root = Path(__file__).resolve().parents[2]
+        agent = build_report_agent(
             chat_model=self.chat_model,
-            system_prompt=load_agent_prompt(),
-            tools=tools,
+            mmchat_model=self.mmchat_model,
+            project_path=project_path,
+            repo_root=repo_root,
             checkpointer=checkpointer,
             store=self.store,
+            debug=self.debug,
         )
 
         # Build user message (agent will extract params and call run_indexer)
-        report_guide_path = str(Path(__file__).resolve().parent / "prompts" / "report.md")
+        report_guide_path = to_virtual_path(
+            Path(__file__).resolve().parent / "prompts" / "report.md", repo_root
+        )
+        virtual_project_path = to_virtual_path(project_path, repo_root)
+        virtual_output_path = to_virtual_path(output_path, repo_root)
         user_msg = (
             f"Generate a bioinformatics report.\n\n"
             f"Background: {background}\n"
             f"Output language: {output_lang}\n"
-            f"Output path: {output_path}\n"
-            f"Project path: {project_path}\n"
+            f"Output path: {virtual_output_path}\n"
+            f"Project path: {virtual_project_path}\n"
             f"Report guide path: {report_guide_path}\n"
         )
 

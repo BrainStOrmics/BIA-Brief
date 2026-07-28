@@ -12,9 +12,9 @@ English version: [README.md](README.md)
 
 - 🚀 **端到端自动化** — 从分析图片到最终 PDF，一条命令完成
 - 👁 **多模态 Indexer** — 视觉语言模型自动对图片按分析步骤分类，生成标题和段落摘要
-- 🤖 **ReAct Agent 流水线** — 基于 LangGraph 的智能体，具备工具调用、迭代优化和结构化报告撰写能力
+- 🤖 **DeepAgents 报告流水线** — 使用 DeepAgents 编排层、内置文件/todo/task 工具，并将 Indexer 拆为子 Agent
 - 👥 **人在回路（HITL）** — 在 Indexer 输出和大纲生成阶段可选人工审阅，支持超时自动继续
-- :brain: **智能背景组装** — 结构化 `project_info.md` → 标准化背景文本，字段缺失时由 LLM 自动生成补全
+- :brain: **智能背景组装** — 结构化 `project_info.md` → 确定性的标准化背景文本；用 `项目简介` 补充具体研究语境
 - 📄 **多格式导出** — Markdown、PDF（Playwright Chromium）、LaTeX（纯标准库，`ctex` 中文支持）
 - 🎨 **模板系统** — 可复用的 `{{Placeholder}}` 模板引擎；内置 scRNA、spatial、standard 三套模板
 - :stethoscope: **项目健康检查** — `doctor.py` 一秒内完成环境、配置、模板和项目结构验证
@@ -30,7 +30,8 @@ src/Brief/               核心库
   ├── pipeline/          运行配置解析、项目信息背景组装
   ├── tools/             Indexer、文件操作、大纲审阅
   ├── utils/             后处理、PDF、LaTeX、模板渲染
-  ├── agent.py           LangGraph ReAct Agent
+  ├── agent.py           DeepAgents 报告 Agent 适配器
+  ├── pipeline/agent_runtime.py  运行时装配和虚拟文件 seam
   ├── config/            模型配置与凭据
   └── core.py            流水线编排器
 scripts/                 入口脚本（run_project, run_batch, doctor）
@@ -50,7 +51,7 @@ generate-BIA-brief/      独立 skill/CLI 包
 ```mermaid
 flowchart LR
   A[项目文件<br/>图片、脚本、表格] --> B[Indexer<br/>视觉 LLM]
-  B --> C[ReAct Agent<br/>LangGraph + HITL]
+  B --> C[DeepAgents Agent<br/>Indexer 子 Agent + HITL]
   C --> D[后处理<br/>嵌入、重编号、包装]
   D --> E["模板渲染<br/>{{Placeholder}}"]
   E --> F[导出<br/>PDF / LaTeX]
@@ -59,7 +60,7 @@ flowchart LR
 | 阶段                 | 组件                           | 职责                                                                                                                                                                                                                                  |
 | -------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 🔍 **Indexer** | `tools/indexer_tool.py`      | 扫描`pics/` 和 `scripts/`，按分析步骤（QC ➡️ HVG ➡️ PCA ➡️ Clustering ➡️ Markers ➡️ Annotation ➡️ PAGA）对图片分类，通过多模态模型生成描述和段落摘要。结果按 SHA256（background+lang）缓存。                          |
-| 🤖 **Agent**   | `agent.py`                   | LangGraph`create_agent`，配备工具（`run_indexer`、`review_outline`、`read_file`、`write_file`、`create_task_list`、`mark_task_complete`）。读取 `index.md`，依据 prompt 规范撰写报告正文并填入 `{{Body_Content}}`。 |
+| 🤖 **Agent**   | `agent.py`、`pipeline/agent_runtime.py` | DeepAgents 编排层，使用内置文件/todo/task 工具，并将 Indexer 拆为子 Agent；读取 `index.md`，依据 prompt 规范撰写报告正文并填入 `{{Body_Content}}`。 |
 | 👥 **HITL**    | `core.py`                    | 基于 interrupt 的人工审阅机制。Windows 用`threading.Timer`，POSIX 用 `SIGALRM`，支持超时自动继续。批量模式下通过 `BRIEF_AUTO_APPROVE=1` 跳过。                                                                                  |
 | 🔧 **后处理**  | `utils/postprocess.py`       | Base64 图片嵌入、自动重编号（从 2 开始）、段落包装。                                                                                                                                                                                  |
 | 🖼 **模板**    | `utils/parse_md_template.py` | 单遍正则替换`{{Placeholder}}`，无 Jinja2 依赖。                                                                                                                                                                                     |
@@ -153,7 +154,7 @@ projects/<project_id>/
 
 ### `project_info.md` 📝
 
-该文件是报告 Agent 获取项目背景的主要来源。用户填写的字段直接使用，空字段在运行时由 LLM 根据已有元数据自动生成。
+该文件是报告 Agent 获取项目背景的主要来源。用户填写的字段会被直接使用；空字段会被跳过，不会由 LLM 自动补全。`项目简介` 是补充生物学问题、组织/细胞背景和项目特异解读目标的主要位置。
 
 建议字段：
 
@@ -165,7 +166,7 @@ projects/<project_id>/
 参考基因组：GRCm39
 样本数量：12
 测序技术：scRNA-seq
-项目简介：          ← 可选 — 留空则由 LLM 自动生成
+项目简介：          ← 可选但建议填写，用于提供项目特异研究语境
 样本ID：
 SAMPLE001
 ...
@@ -280,3 +281,10 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 ## 许可证
 
 参见 [LICENSE](LICENSE)。
+
+## Agent 运行时
+
+报告流程使用 DeepAgents 0.6.x 作为编排层，同时保留 LangChain 模型适配和
+LangGraph checkpoint。通用文件、todo、task 操作使用 DeepAgents 内置工具，
+Indexer 作为子 Agent 运行；Indexer 审阅、大纲审阅以及
+`BRIEF_AUTO_APPROVE=1` 自动批准模式继续保留。

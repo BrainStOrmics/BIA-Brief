@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from langchain.agents import create_agent
+from deepagents import create_deep_agent
 from langchain_core.language_models import LanguageModelLike
 
 
@@ -39,7 +39,7 @@ def create_brief_agent(
     Returns:
         CompiledStateGraph: The compiled agent graph.
     """
-    return create_agent(
+    return create_deep_agent(
         model=chat_model,
         tools=tools,
         system_prompt=system_prompt,

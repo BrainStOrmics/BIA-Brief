@@ -110,6 +110,7 @@ def main() -> int:
     ok &= _check_import("yaml", "pyyaml")
     ok &= _check_import("langchain_openai", "langchain_openai")
     ok &= _check_import("langchain_core", "langchain_core")
+    ok &= _check_import("deepagents", "deepagents")
     ok &= _check_import("PIL", "pillow")
     ok &= _check_import("markdown", "markdown")
     ok &= _check_import("pypdf", "pypdf")
