@@ -43,7 +43,7 @@ templates/               报告模板和共享资源
   ├── standard/          标准 Markdown 输出参考
   └── assets/            共享品牌元素
 docs/examples/           参考样例文件
-generate-BIA-brief/      独立 skill/CLI 包
+dist/                    本地构建的 wheel 文件
 ```
 
 ## 架构设计
@@ -78,6 +78,28 @@ flowchart LR
 ---
 
 ## 快速开始
+
+在当前环境安装 BIA-Brief：
+
+```powershell
+python -m pip install -e .
+playwright install chromium
+```
+
+安装后推荐使用产品化命令：
+
+```powershell
+bia-brief-doctor --project projects/my_project
+bia-brief-project my_project
+bia-brief-batch --all
+```
+
+构建发布 wheel：
+
+```powershell
+python -m build --wheel
+python -m pip install dist\bia_brief-*.whl
+```
 
 ### 1. 环境准备 🔧
 
@@ -258,7 +280,7 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 
 ## 说明 🔖
 
-- `generate-BIA-brief/` 是独立的 skill/CLI 包，保留自己的核心模块副本。对 `src/Brief/` 的修改需要手动同步。
+- 核心运行时已经封装为 `bia-brief` Python 包。独立的 `bia-brief-report` Skill 只调用已安装的 CLI，不复制核心源码。
 - `logs/` 和 `deliverables/` 被 git 忽略；`deliverables/` 在运行时自动创建。
 - 批量日志写入 `logs/batch/<timestamp>_<project>.log`。
 - `project_template/` 中的 `.gitkeep` 文件用于保留空目录结构。

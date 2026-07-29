@@ -45,6 +45,7 @@ htmlcov/
 local_tmp/
 tmp/
 .cache/
+cache/
 
 # Generated data at repository root or in project folders
 local_tests/

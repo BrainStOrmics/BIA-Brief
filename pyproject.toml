@@ -4,11 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bia-brief"
-version = "0.1.0"
+version = "0.2.0"
 description = "Automated bioinformatics report generation from project figures, scripts, and metadata."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 authors = [
   { name = "BrainStOrmics" }
 ]
@@ -28,13 +29,22 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
+  "build>=1.2",
 ]
 
 [project.urls]
 Repository = "https://github.com/BrainStOrmics/BIA-Brief"
+
+[project.scripts]
+bia-brief = "Brief.cli:main"
+bia-brief-project = "Brief.cli:run_project_cli"
+bia-brief-batch = "Brief.cli:run_batch_cli"
+bia-brief-doctor = "Brief.doctor:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
 "Brief.prompts" = ["*.md"]
+"Brief.resources" = ["templates/**/*.md", "config/*.yaml"]
+"Brief.resources.config" = ["*.yaml*"]

@@ -43,7 +43,7 @@ templates/               report templates and shared assets
   ├── standard/          standard Markdown output
   └── assets/            shared branding elements
 docs/examples/           reference sample files
-generate-BIA-brief/      standalone skill/CLI package
+dist/                    built wheel artifacts (local only)
 ```
 
 ## Architecture
@@ -78,6 +78,30 @@ flowchart LR
 ---
 
 ## Quick start
+
+Install the package in the active environment:
+
+```powershell
+python -m pip install -e .
+playwright install chromium
+```
+
+After installation, use either the console commands or the compatibility
+scripts. The console commands are the supported product interface:
+
+```powershell
+bia-brief-doctor --project projects/my_project
+bia-brief-project my_project
+bia-brief-batch --all
+```
+
+For a release wheel:
+
+```powershell
+python -m build --wheel
+python -m pip install dist\bia_brief-*.whl
+```
+
 
 ### 1. Setup :wrench:
 
@@ -260,7 +284,7 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 
 ## Notes :bookmark:
 
-- `generate-BIA-brief/` is a standalone skill/CLI package with its own copy of core modules. Changes to `src/Brief/` must be synced manually.
+- The core runtime is packaged as `bia-brief`. A separate `bia-brief-report` Skill can call the installed CLI without copying runtime source code.
 - `logs/` and `deliverables/` are gitignored; `deliverables/` is auto-created at runtime.
 - Batch logs are written to `logs/batch/<timestamp>_<project>.log`.
 - The project template skeleton at `project_template/` includes `.gitkeep` files to preserve the directory structure.
