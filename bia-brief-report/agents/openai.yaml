@@ -1,0 +1,4 @@
+interface:
+  display_name: "BIA-Brief Report"
+  short_description: "Generate bioinformatics reports with BIA-Brief."
+  default_prompt: "Use $bia-brief-report to generate and verify a report for this bioinformatics project."

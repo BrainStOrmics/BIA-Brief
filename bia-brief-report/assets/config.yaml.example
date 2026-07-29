@@ -1,0 +1,19 @@
+llm_config:
+  CHAT_MODEL_API:
+    api: ""
+    url: ""
+    model: ""
+    type: "openai"
+  MULTIMODAL_CHAT_MODEL_API:
+    api: ""
+    url: ""
+    model: ""
+    type: "openai"
+  ENABLE_THINKING: true
+  ENABLE_SEARCH: false
+
+brief_config:
+  PROJECT_ID: "example"
+  PROJECT_PATH: ""
+  REPORT_TEMPLATE: ""
+  OUTPUT_DIR: "output"
