@@ -73,7 +73,7 @@ flowchart LR
 
 - 🐍 Python 3.10+，已安装项目依赖
 - 🌐 [Playwright Chromium](https://playwright.dev/python/)（`playwright install chromium`）用于 PDF 导出
-- 🔑 **兼容 OpenAI API 的端点**，分别配置文本模型和多模态模型（在 `src/Brief/config/config.yaml` 中设置）
+- 🔑 **兼容 OpenAI API 的端点**，分别配置文本模型和多模态模型（通过 `bia-brief-setup` 一次配置）
 
 ---
 
@@ -82,9 +82,14 @@ flowchart LR
 在当前环境安装 BIA-Brief：
 
 ```powershell
-python -m pip install -e .
+python -m pip install "bia-brief==0.2.1"
 playwright install chromium
+bia-brief-setup
 ```
+
+首次运行 `bia-brief-setup` 时配置文本模型和视觉模型。向导把配置保存到
+`~/.bia-brief/config.yaml`，API 密钥不会在终端回显。后续生成报告会自动复用这份配置，
+不需要重复传入 `--config`。如需使用其他配置，可设置 `BIA_BRIEF_CONFIG` 或显式传入 `--config`。
 
 安装后推荐使用产品化命令：
 
@@ -104,12 +109,12 @@ python -m pip install dist\bia_brief-*.whl
 ### 1. 环境准备 🔧
 
 ```bash
-# 克隆并安装依赖
-pip install -r requirements.txt
+# 克隆并从源码安装
+pip install -e .
 playwright install chromium
 
-# 从模板创建配置文件（填入 API 密钥）
-cp src/Brief/config/config.yaml.example src/Brief/config/config.yaml
+# 一次性配置模型（输入 API 密钥时不会回显）
+bia-brief-setup
 ```
 
 ### 2. 准备项目 📂
@@ -260,9 +265,11 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 | 层级             | 文件                             | 用途                                                  |
 | ---------------- | -------------------------------- | ----------------------------------------------------- |
 | **运行层** | `run_config.yaml`              | 项目根目录、默认模板/语言、批量日志目录、自动审阅行为 |
-| **模型层** | `src/Brief/config/config.yaml` | API 密钥、接口地址、模型名称、think/search 开关       |
+| **模型层** | `~/.bia-brief/config.yaml` | API 密钥、接口地址、模型名称、think/search 开关       |
 
-`setup_brief()` 首次运行时若 `config.yaml` 不存在，会自动从 `config.yaml.example` 创建。运行配置 `run_config.yaml` 内置合理默认值，可通过 `--config` 覆盖。
+首次运行 `bia-brief-setup` 会创建用户级模型配置。后续运行自动查找该文件；如需切换配置，
+可设置 `BIA_BRIEF_CONFIG` 或传入 `--config`。运行配置 `run_config.yaml` 内置合理默认值，
+通过 `--runner-config` 覆盖。
 
 ---
 
@@ -270,10 +277,10 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 
 1. 📂 将分析结果图放入 `projects/<project_id>/pics/`
 2. 📝 （可选）填写 `project_info.md` — 至少填写物种、样本量和项目名称
-3. 🔑 在 `src/Brief/config/config.yaml` 中配置 API 凭据
+3. 🔑 运行 `bia-brief-setup` 一次性配置文本模型和视觉模型
 4. :stethoscope: 运行 `python scripts/doctor.py --project <project_id>` 确认就绪
-5. 👁 预览背景文本：`python scripts/run_project.py <project_id> --print-background`
-6. 🚀 生成报告：`python scripts/run_project.py <project_id>`
+5. 👁 预览背景文本：`bia-brief-project <project_id> --print-background`
+6. 🚀 生成报告：`bia-brief-project <project_id>`
 7. ✅ 查看 `projects/<project_id>/output/report.md` 和 `deliverables/` 中的 PDF
 
 ---

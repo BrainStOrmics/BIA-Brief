@@ -42,7 +42,20 @@ PAGE_CONTENT_HEIGHT_PX = (A4_HEIGHT_MM - 15.0 - 30.0) * MM_TO_PX
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 PROJECT_ROOT = REPO_ROOT.parent.parent
-FALLBACK_BACKGROUND_PATH = PROJECT_ROOT / "templates" / "assets" / "BGI_SY" / "pics" / "background.png"
+
+
+def _template_assets_root() -> Path:
+    """Find template assets in a source checkout or an installed wheel."""
+    source_assets = SCRIPT_DIR.parents[2] / "templates" / "assets"
+    package_assets = SCRIPT_DIR.parent / "resources" / "templates" / "assets"
+    for candidate in (source_assets, package_assets):
+        if candidate.exists():
+            return candidate
+    return source_assets
+
+
+TEMPLATE_ASSETS_ROOT = _template_assets_root()
+FALLBACK_BACKGROUND_PATH = TEMPLATE_ASSETS_ROOT / "BGI_SY" / "pics" / "background.png"
 INSTALL_REQUIREMENTS_HINT = "请先安装依赖: pip install -r requirements.txt"
 INSTALL_PYPDF_HINT = "缺少 pypdf 依赖，请先安装：pip install pypdf"
 CHROMIUM_LAUNCH_ERROR_HINT = "PDF 转换失败，请确保 Playwright 已安装其自带的 Chromium。"

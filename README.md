@@ -73,7 +73,7 @@ flowchart LR
 
 - :snake: Python 3.10+ with project dependencies installed
 - :globe_with_meridians: [Playwright Chromium](https://playwright.dev/python/) for PDF export (`playwright install chromium`)
-- :key: **OpenAI-compatible API endpoints** for both chat and multi-modal models (configured in `src/Brief/config/config.yaml`)
+- :key: **OpenAI-compatible API endpoints** for both chat and multi-modal models (configured once with `bia-brief-setup`)
 
 ---
 
@@ -82,9 +82,15 @@ flowchart LR
 Install the package in the active environment:
 
 ```powershell
-python -m pip install -e .
+python -m pip install "bia-brief==0.2.1"
 playwright install chromium
+bia-brief-setup
 ```
+
+The setup wizard stores chat and vision model settings in
+`~/.bia-brief/config.yaml`. After the first setup, report commands reuse this
+file automatically. Use `BIA_BRIEF_CONFIG` or `--config` only when selecting a
+different model configuration.
 
 After installation, use either the console commands or the compatibility
 scripts. The console commands are the supported product interface:
@@ -106,12 +112,12 @@ python -m pip install dist\bia_brief-*.whl
 ### 1. Setup :wrench:
 
 ```bash
-# Clone and install
-pip install -r requirements.txt
+# Clone and install from source
+pip install -e .
 playwright install chromium
 
-# Create config from template (edit with your API keys)
-cp src/Brief/config/config.yaml.example src/Brief/config/config.yaml
+# Configure models once; API keys are entered without being echoed
+bia-brief-setup
 ```
 
 ### 2. Prepare a project :open_file_folder:
@@ -262,9 +268,12 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 | Layer | File | Purpose |
 |---|---|---|
 | **Runner** | `run_config.yaml` | Project root, default template/language, batch log dir, auto-approve behavior |
-| **Model** | `src/Brief/config/config.yaml` | API keys, base URLs, model names, thinking/search flags |
+| **Model** | `~/.bia-brief/config.yaml` | API keys, base URLs, model names, thinking/search flags |
 
-`setup_brief()` auto-creates `config.yaml` from `config.yaml.example` on first run if it is missing. The runner config (`run_config.yaml`) ships with sensible defaults and can be overridden per invocation with `--config`.
+Run `bia-brief-setup` once to create the user-level model configuration. Later
+runs discover it automatically. Set `BIA_BRIEF_CONFIG` or pass `--config` to
+use another model configuration. The runner config (`run_config.yaml`) ships
+with sensible defaults and is overridden with `--runner-config`.
 
 ---
 
@@ -272,10 +281,10 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 
 1. :open_file_folder: Place analysis figures in `projects/<project_id>/pics/`
 2. :pencil: (Optional) Fill in `project_info.md` — at minimum the species, sample count, and project name
-3. :key: Configure API credentials in `src/Brief/config/config.yaml`
+3. :key: Run `bia-brief-setup` once to configure the chat and vision models
 4. :stethoscope: Run `python scripts/doctor.py --project <project_id>` to verify readiness
-5. :eye: Preview the background: `python scripts/run_project.py <project_id> --print-background`
-6. :rocket: Generate report: `python scripts/run_project.py <project_id>`
+5. :eye: Preview the background: `bia-brief-project <project_id> --print-background`
+6. :rocket: Generate report: `bia-brief-project <project_id>`
 7. :white_check_mark: Review `projects/<project_id>/output/report.md` and the PDF in `deliverables/`
 
 ---

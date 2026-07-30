@@ -4,6 +4,7 @@ src/Brief/config/config.yaml
 
 # Generated report outputs
 projects/*/output/
+.bia-brief/
 output/
 deliverables/
 logs/
@@ -79,6 +80,10 @@ CLAUDE.md
 
 # Template asset cache
 templates/assets/BGI_SY/repo-temp-pics/
+!src/Brief/resources/templates/assets/
+!src/Brief/resources/templates/assets/BGI_SY/
+!src/Brief/resources/templates/assets/BGI_SY/pics/
+!src/Brief/resources/templates/assets/BGI_SY/pics/*
 
 # Operating-system metadata
 .DS_Store

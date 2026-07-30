@@ -8,7 +8,7 @@ from typing import Any
 
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
-from deepagents.backends.protocol import WriteResult
+from deepagents.backends.protocol import GrepResult, WriteResult
 from langgraph.checkpoint.memory import MemorySaver
 
 from ..agent import load_agent_prompt
@@ -38,6 +38,32 @@ class ReportFilesystemBackend(FilesystemBackend):
             return WriteResult(path=file_path)
         except (OSError, UnicodeEncodeError, RuntimeError) as exc:
             return WriteResult(error=f"Error writing file '{file_path}': {exc}")
+
+    def grep(self, pattern: str, path: str | None = None, glob: str | None = None) -> GrepResult:
+        """Use a literal Python fallback for the Windows ripgrep stdout bug."""
+        try:
+            return super().grep(pattern, path=path, glob=glob)
+        except AttributeError as exc:
+            if "splitlines" not in str(exc):
+                raise
+
+        search_root = self._resolve_path(path or "/")
+        files = [search_root] if search_root.is_file() else search_root.rglob(glob or "*")
+        matches = []
+        for candidate in files:
+            if not candidate.is_file():
+                continue
+            try:
+                lines = candidate.read_text(encoding="utf-8", errors="replace").splitlines()
+            except OSError:
+                continue
+            virtual_path = "/" + candidate.relative_to(self.cwd).as_posix()
+            matches.extend(
+                {"path": virtual_path, "line": line_no, "text": line}
+                for line_no, line in enumerate(lines, start=1)
+                if pattern in line
+            )
+        return GrepResult(matches=matches)
 
 
 def to_virtual_path(path: str | Path, repo_root: str | Path) -> str:

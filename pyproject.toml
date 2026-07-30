@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bia-brief"
-version = "0.2.0"
+version = "0.2.1"
 description = "Automated bioinformatics report generation from project figures, scripts, and metadata."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,7 +18,7 @@ dependencies = [
   "langchain-core>=0.3",
   "langchain-openai>=0.3",
   "langgraph>=0.2",
-  "deepagents>=0.6,<1.0",
+  "deepagents>=0.6,<0.7",
   "markdown>=3.5",
   "Pillow>=10.0",
   "playwright>=1.40",
@@ -37,6 +37,7 @@ Repository = "https://github.com/BrainStOrmics/BIA-Brief"
 
 [project.scripts]
 bia-brief = "Brief.cli:main"
+bia-brief-setup = "Brief.cli:setup_cli"
 bia-brief-project = "Brief.cli:run_project_cli"
 bia-brief-batch = "Brief.cli:run_batch_cli"
 bia-brief-doctor = "Brief.doctor:main"
@@ -46,5 +47,5 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "Brief.prompts" = ["*.md"]
-"Brief.resources" = ["templates/**/*.md", "config/*.yaml"]
+"Brief.resources" = ["templates/**/*.md", "templates/assets/BGI_SY/pics/*", "config/*.yaml"]
 "Brief.resources.config" = ["*.yaml*"]

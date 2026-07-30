@@ -250,7 +250,15 @@ class Brief:
         # their post-action HITL interrupts are assembled in one runtime seam.
         logger.info("Creating DeepAgents report agent with HITL interrupt...")
         checkpointer = self.checkpointer or MemorySaver()
-        repo_root = Path(__file__).resolve().parents[2]
+        # The installed wheel lives in site-packages, which is not the user's
+        # project workspace. Keep the filesystem backend rooted at the project
+        # parent so a wheel can safely operate on projects outside the package.
+        project_root = Path(project_path).expanduser().resolve()
+        repo_root = project_root.parent
+        report_guide_source = Path(__file__).resolve().parent / "prompts" / "report.md"
+        report_guide_path = project_root / ".bia-brief" / "report.md"
+        report_guide_path.parent.mkdir(parents=True, exist_ok=True)
+        report_guide_path.write_text(report_guide_source.read_text(encoding="utf-8"), encoding="utf-8")
         agent = build_report_agent(
             chat_model=self.chat_model,
             mmchat_model=self.mmchat_model,
@@ -262,9 +270,7 @@ class Brief:
         )
 
         # Build user message (agent will extract params and call run_indexer)
-        report_guide_path = to_virtual_path(
-            Path(__file__).resolve().parent / "prompts" / "report.md", repo_root
-        )
+        report_guide_virtual_path = to_virtual_path(report_guide_path, repo_root)
         virtual_project_path = to_virtual_path(project_path, repo_root)
         virtual_output_path = to_virtual_path(output_path, repo_root)
         user_msg = (
@@ -273,7 +279,7 @@ class Brief:
             f"Output language: {output_lang}\n"
             f"Output path: {virtual_output_path}\n"
             f"Project path: {virtual_project_path}\n"
-            f"Report guide path: {report_guide_path}\n"
+            f"Report guide path: {report_guide_virtual_path}\n"
         )
 
         config = {"configurable": {"thread_id": f"brief-{uuid.uuid4().hex[:8]}"}}

@@ -14,6 +14,7 @@ from typing import Any
 
 from .pipeline.project_info_background import build_project_background
 from .pipeline.runner_config import DEFAULT_CONFIG, load_runner_config
+from .config.setup import interactive_setup, resolve_model_config_path
 
 
 def _package_root() -> Path:
@@ -82,21 +83,24 @@ def _load_models(config_path: str | None):
     from .config.config import llm_config, load_yaml_config
     from .utils.setup import setup_LLMs
 
-    configured = config_path or os.environ.get("BIA_BRIEF_CONFIG")
-    path = Path(configured).expanduser() if configured else None
-    if path is not None:
-        if not path.is_file():
-            raise FileNotFoundError(f"Model config not found: {path}")
-        load_yaml_config(str(path))
-    else:
-        default = _package_root() / "config" / "config.yaml"
-        if not default.is_file():
-            raise FileNotFoundError(
-                "Model config is required. Pass --config or set BIA_BRIEF_CONFIG."
-            )
-        load_yaml_config(str(default))
+    path = resolve_model_config_path(config_path)
+    if path is None:
+        raise FileNotFoundError(
+            "Model config is required. Run bia-brief-setup once, or pass --config."
+        )
+    load_yaml_config(str(path))
     setup_LLMs()
     return llm_config
+
+
+def setup_cli(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Configure BIA-Brief models for future runs.")
+    parser.add_argument("--output", default=None, help="Config path (default: ~/.bia-brief/config.yaml)")
+    args = parser.parse_args(argv)
+    path = interactive_setup(output_path=args.output)
+    print(f"Saved model config: {path}")
+    print("Future runs can omit --config and reuse this file.")
+    return 0
 
 
 def run_project_cli(argv: list[str] | None = None) -> int:
@@ -221,10 +225,12 @@ def main(argv: list[str] | None = None) -> int:
     command_args = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(description="BIA-Brief report generation package")
     if not command_args or command_args[0] in {"-h", "--help"}:
-        parser.epilog = "Commands: project, batch, doctor"
+        parser.epilog = "Commands: setup, project, batch, doctor"
         parser.print_help()
         return 0
     command, rest = command_args[0], command_args[1:]
+    if command == "setup":
+        return setup_cli(rest)
     if command == "project":
         return run_project_cli(rest)
     if command == "batch":

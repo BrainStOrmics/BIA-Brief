@@ -9,6 +9,16 @@ from typing import Any
 from .io import load_report_template_file
 
 
+def _template_assets_root() -> Path:
+    """Find template assets in a source checkout or an installed wheel."""
+    source_assets = Path(__file__).resolve().parents[3] / "templates" / "assets"
+    package_assets = Path(__file__).resolve().parents[1] / "resources" / "templates" / "assets"
+    for candidate in (source_assets, package_assets):
+        if candidate.exists():
+            return candidate
+    return source_assets
+
+
 def _relative_path_from_report(path_text: str, report_output_dir: Path) -> str:
     source = Path(path_text).expanduser().resolve()
     return os.path.relpath(source, start=report_output_dir).replace("\\", "/")
@@ -75,9 +85,8 @@ def render_report_markdown(
         for path in pic_abs_dirs
     ]
 
-    # Use repo root (relative to this file's location) instead of project_path
-    repo_root = Path(__file__).resolve().parents[3]  # src/Brief/utils/ -> repo root
-    cover_image_path = repo_root / "templates" / "assets" / "BGI_SY" / "pics" / "cover.png"
+    assets_root = _template_assets_root()
+    cover_image_path = assets_root / "BGI_SY" / "pics" / "cover.png"
     cover_image_md_path = _relative_path_from_report(cover_image_path, report_output_dir)
 
     template_context = _build_template_context(
@@ -96,9 +105,7 @@ def render_report_markdown(
     # In the template file itself, ./BGI_SY/ works (relative to templates/).
     # After rendering to <project>/output/report.md, ./BGI_SY/ would break, so
     # we rewrite it to the correct relative path from the output directory.
-    bgi_sy_rel = _relative_path_from_report(
-        str(repo_root / "templates" / "assets" / "BGI_SY"), report_output_dir
-    )
+    bgi_sy_rel = _relative_path_from_report(str(assets_root / "BGI_SY"), report_output_dir)
     report_md = report_md.replace("./BGI_SY/", f"{bgi_sy_rel}/")
 
 

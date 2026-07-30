@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
+from deepagents.backends import FilesystemBackend
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -45,3 +46,19 @@ def test_report_backend_overwrites_generated_artifacts(tmp_path: Path) -> None:
     assert backend.write("/report.md", "old").error is None
     assert backend.write("/report.md", "new").error is None
     assert (tmp_path / "report.md").read_text(encoding="utf-8") == "new"
+
+
+def test_report_backend_falls_back_when_ripgrep_returns_no_stdout(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "report.md").write_text("needle here\n", encoding="utf-8")
+
+    def broken_grep(self, pattern, path=None, glob=None):
+        raise AttributeError("'NoneType' object has no attribute 'splitlines'")
+
+    monkeypatch.setattr(FilesystemBackend, "grep", broken_grep)
+    backend = ReportFilesystemBackend(root_dir=tmp_path, virtual_mode=True)
+
+    result = backend.grep("needle", path="/report.md")
+
+    assert result.error is None
+    assert result.matches
+    assert result.matches[0]["line"] == 1
