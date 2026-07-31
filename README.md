@@ -236,7 +236,7 @@ python scripts/run_batch.py project_a project_b
 | `--print-background` | Preview background without running the pipeline |
 | `--interactive-review` | Enable manual HITL review prompts |
 | `--no-delivery-copy` | Skip copying PDF to `deliverables/` |
-| `--config run_config.yaml` | Custom runner config path |
+| `--runner-config run_config.yaml` | Custom runner config path |
 | `--stop-on-failure` | (Batch) abort on first error |
 
 ---

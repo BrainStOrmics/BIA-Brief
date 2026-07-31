@@ -25,3 +25,20 @@ def test_product_cli_help(capsys: pytest.CaptureFixture[str]) -> None:
 def test_top_level_cli_help(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["--help"]) == 0
     assert "BIA-Brief report generation package" in capsys.readouterr().out
+
+
+def test_project_cli_passes_no_config_for_saved_configuration(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    project = tmp_path / "project"
+    (project / "pics").mkdir(parents=True)
+    seen: list[str | None] = []
+
+    monkeypatch.setattr("Brief.cli._load_models", lambda config: seen.append(config) or object())
+    monkeypatch.setattr("Brief.cli.build_project_background", lambda *_args: "background")
+
+    assert run_project_cli([str(project), "--print-background"]) == 0
+    assert seen == [None]
+    assert "background" in capsys.readouterr().out

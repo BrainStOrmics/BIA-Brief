@@ -20,14 +20,23 @@ DEFAULT_USER_CONFIG_PATH = user_config_dir() / "config.yaml"
 
 def resolve_model_config_path(explicit: str | Path | None = None) -> Path | None:
     """Resolve model config in explicit, environment, user, then legacy order."""
-    candidates: list[Path] = []
     if explicit:
-        candidates.append(Path(explicit).expanduser())
+        candidate = Path(explicit).expanduser()
+        if not candidate.is_file():
+            raise FileNotFoundError(f"Model config not found: {candidate}")
+        return candidate.resolve()
+
     configured = os.environ.get("BIA_BRIEF_CONFIG")
     if configured:
-        candidates.append(Path(configured).expanduser())
-    candidates.append(user_config_dir() / "config.yaml")
-    candidates.append(Path(__file__).resolve().parent / "config.yaml")
+        candidate = Path(configured).expanduser()
+        if not candidate.is_file():
+            raise FileNotFoundError(f"Model config not found: {candidate}")
+        return candidate.resolve()
+
+    candidates = [
+        user_config_dir() / "config.yaml",
+        Path(__file__).resolve().parent / "config.yaml",
+    ]
     for candidate in candidates:
         if candidate.is_file():
             return candidate.resolve()

@@ -233,7 +233,7 @@ python scripts/run_batch.py project_a project_b
 | `--print-background`       | 预览背景文本，不运行流水线                                         |
 | `--interactive-review`     | 开启人工审阅（HITL）                                               |
 | `--no-delivery-copy`       | 不复制 PDF 到`deliverables/`                                     |
-| `--config run_config.yaml` | 指定运行配置路径                                                   |
+| `--runner-config run_config.yaml` | 指定运行配置路径                                                   |
 | `--stop-on-failure`        | （批量）首次失败即停止                                             |
 
 ---
