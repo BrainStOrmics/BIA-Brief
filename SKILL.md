@@ -14,7 +14,7 @@ Install the Skill through the Codex Skill installer, then install the pinned
 runtime and its PDF browser in the active environment:
 
 ```powershell
-python -m pip install "bia-brief==0.2.2"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.2"
 playwright install chromium
 ```
 
@@ -30,10 +30,14 @@ keys are entered interactively and are never printed by the Skill. After this
 one-time setup, omit `--config`; the CLI reuses that file automatically. Set
 `BIA_BRIEF_CONFIG` only when a different configuration is needed.
 
-If the pinned release is not yet on PyPI, install the immutable Git tag:
+The runtime is not published to PyPI yet, so the immutable Git tag used above
+is the install source; `pip install "bia-brief==0.2.2"` fails with
+`No matching distribution found`. Install this release or newer, because
+`v0.2.1` and earlier still carry the previous page background. Once the
+release reaches PyPI, the shorter form replaces the Git tag:
 
 ```powershell
-python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.2"
+python -m pip install "bia-brief==0.2.2"
 ```
 
 ## Run a report

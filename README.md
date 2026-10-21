@@ -5,12 +5,12 @@ agent how to inspect a bioinformatics project and use the installed BIA-Brief
 runtime to produce and verify Markdown, PDF, and LaTeX reports.
 
 The Skill contains workflow instructions; the report engine is installed
-separately as the pinned `bia-brief==0.2.2` Python package.
+separately as the pinned `bia-brief` 0.2.2 Python package.
 
 ## Quick Start
 
 ```powershell
-python -m pip install "bia-brief==0.2.2"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.2"
 playwright install chromium
 bia-brief-setup
 bia-brief-project <project-id-or-path>
@@ -40,14 +40,17 @@ it into the agent's skills directory. Then install the pinned runtime in the
 environment that will generate reports:
 
 ```powershell
-python -m pip install "bia-brief==0.2.2"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.2"
 playwright install chromium
 ```
 
-If PyPI does not contain the release, use the immutable Git tag:
+The runtime is not published to PyPI yet, so the immutable Git tag is the
+install source. `pip install "bia-brief==0.2.2"` currently fails with
+`No matching distribution found`. Once a release reaches PyPI, the shorter
+form becomes available:
 
 ```powershell
-python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.2"
+python -m pip install "bia-brief==0.2.2"
 ```
 
 ## One-Time Model Setup
@@ -112,12 +115,17 @@ syntax; the Python package supports both Windows and POSIX approval timers.
 ## Release Source
 
 The maintained Skill branch is `codex/bia-brief-skill`. The runtime release is
-available from the immutable `v0.2.2` Git tag when PyPI is unavailable:
+available from the immutable `v0.2.2` Git tag:
 
 ```text
 https://github.com/BrainStOrmics/BIA-Brief/tree/codex/bia-brief-skill
 https://github.com/BrainStOrmics/BIA-Brief/tree/v0.2.2
 ```
+
+`v0.2.2` is the first release whose report pages use a pure-white sheet, so
+figures no longer appear as white rectangles on a slightly darker page.
+Install this release or newer; `v0.2.1` and earlier still carry the previous
+page background.
 
 ## Security Boundary
 
