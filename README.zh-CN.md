@@ -82,7 +82,7 @@ flowchart LR
 在当前环境安装 BIA-Brief：
 
 ```powershell
-python -m pip install "bia-brief==0.2.1"
+python -m pip install "bia-brief==0.2.2"
 playwright install chromium
 bia-brief-setup
 ```
