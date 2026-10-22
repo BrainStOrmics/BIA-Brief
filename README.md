@@ -7,6 +7,8 @@ runtime to produce and verify Markdown, PDF, and LaTeX reports.
 The Skill contains workflow instructions; the report engine is installed
 separately as the pinned `bia-brief` 0.2.2 Python package.
 
+[中文版](README.zh-CN.md)
+
 ## Quick Start
 
 ```powershell
