@@ -104,9 +104,12 @@ bia-brief-project <项目id或路径>
 整个过程要几分钟，分四个阶段：
 
 1. **索引器**扫描图片、读取脚本，写出带图注和段落摘要的 `index.md`。
-2. agent 起草大纲。默认自动批准，不会停下来等你；加 `--interactive-review` 可以自己审大纲。
+2. agent 起草大纲。
 3. agent 把报告正文写入 `output/report.md`。
 4. 嵌入图片、渲染模板，导出 PDF 和 LaTeX。
+
+其中有两个阶段会停下来等人审阅：索引器产物，以及大纲。默认两者都自动批准，
+不会停下来等你；加 `--interactive-review` 可以逐个自己审。
 
 如果想在正式跑之前先看背景文字，可以只打印它然后退出：
 
@@ -116,13 +119,17 @@ bia-brief-project <项目id或路径> --print-background
 
 ## 查看结果
 
-每次成功运行会在项目的 output 目录产出三个文件：
+每次成功运行会在项目的 output 目录产出：
 
 ```text
-output/report.md     报告源文件
-output/report.pdf    成稿报告
-output/report.tex    LaTeX 源文件
+output/report.md          报告源文件
+output/report.pdf         成稿报告
+output/report.tex         LaTeX 源文件
+output/report.md.outline  经审阅的大纲
+output/report.md.title    agent 拟定的标题
 ```
+
+索引器写出的 `index.md` 在项目根目录，不在 `output/` 下。
 
 PDF 还会被复制到仓库级的 `deliverables/` 目录，文件名取自 `project_info.md` 里的
 `报告名称` 字段。加 `--no-delivery-copy` 可跳过这一步。
@@ -150,10 +157,12 @@ PDF 还会被复制到仓库级的 `deliverables/` 目录，文件名取自 `pro
 | 选项 | 作用 |
 |---|---|
 | `--template <key>` | 选择模板：`scRNA`（默认）、`spatial` 或 `standard` |
-| `--print-background` | 打印组装好的背景后退出，不生成报告 |
-| `--interactive-review` | 停下来等人工审大纲，而不是自动批准 |
+| `--print-background` | 打印组装好的背景后退出，不生成报告（需要已有模型配置） |
+| `--interactive-review` | 在索引器和大纲两处停下来等人工审阅，而不是自动批准 |
 | `--no-delivery-copy` | 不把 PDF 复制进 `deliverables/` |
 | `--config <path>` | 本次运行使用指定的模型配置 |
+| `--project-id <id>` | 指定报告中记录的项目 id |
+| `--runner-config <path>` | 使用指定的运行配置 |
 | `--lang <代码>` | 报告语言，默认 `zh-CN` |
 
 批量模式按顺序跑多个项目：

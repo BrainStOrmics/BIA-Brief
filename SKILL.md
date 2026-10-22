@@ -62,6 +62,9 @@ python -m pip install "bia-brief==0.2.4"
    bia-brief-project <project-id-or-path> --print-background
    ```
 
+   This does not call the models, but it still requires a model
+   configuration to exist, so run it after step 5.
+
 7. Generate the report. Keep interactive review only when the user requests it;
    otherwise use the configured auto-approval behavior.
 

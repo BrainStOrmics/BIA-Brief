@@ -118,11 +118,14 @@ The run takes a few minutes and goes through four stages:
 
 1. The **indexer** scans the figures, reads the scripts, and writes
    `index.md` with captions and section summaries.
-2. The agent drafts an outline. By default this is auto-approved and nothing
-   waits for you; add `--interactive-review` to review the outline yourself.
+2. The agent drafts an outline.
 3. The agent writes the report body to `output/report.md`.
 4. Figures are embedded, the template is rendered, and the PDF and LaTeX are
    exported.
+
+Two stages pause for human review: the indexer output, and the outline. By
+default both are auto-approved and nothing waits for you; add
+`--interactive-review` to review each one yourself.
 
 To check the background text before committing to a run, print it and stop:
 
@@ -132,13 +135,17 @@ bia-brief-project <project-id-or-path> --print-background
 
 ## Read the results
 
-Each successful run produces three files in the project's output directory:
+Each successful run produces these files in the project's output directory:
 
 ```text
-output/report.md     the report source
-output/report.pdf    the finished report
-output/report.tex    the LaTeX source
+output/report.md          the report source
+output/report.pdf         the finished report
+output/report.tex         the LaTeX source
+output/report.md.outline  the outline that was reviewed
+output/report.md.title    the title the agent proposed
 ```
+
+The indexer writes `index.md` to the project root, not to `output/`.
 
 The PDF is also copied to the repository-level `deliverables/` directory,
 named after the `报告名称` field in `project_info.md`. Pass
@@ -168,10 +175,12 @@ More cases are in [references/troubleshooting.md](references/troubleshooting.md)
 | Option | Effect |
 |---|---|
 | `--template <key>` | Choose `scRNA` (default), `spatial`, or `standard` |
-| `--print-background` | Print the assembled background and exit without generating |
-| `--interactive-review` | Pause for outline review instead of auto-approving |
+| `--print-background` | Print the assembled background and exit without generating (needs a model config) |
+| `--interactive-review` | Pause for the indexer and outline reviews instead of auto-approving |
 | `--no-delivery-copy` | Do not copy the PDF into `deliverables/` |
 | `--config <path>` | Use a specific model configuration for this run |
+| `--project-id <id>` | Project id to record in the report |
+| `--runner-config <path>` | Use a specific runner configuration |
 | `--lang <code>` | Report language, default `zh-CN` |
 
 Batch mode runs several projects in sequence:
