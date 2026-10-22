@@ -82,7 +82,7 @@ flowchart LR
 Install the package in the active environment:
 
 ```powershell
-python -m pip install "bia-brief==0.2.2"
+python -m pip install "bia-brief==0.2.3"
 playwright install chromium
 bia-brief-setup
 ```
