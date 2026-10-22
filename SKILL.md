@@ -14,7 +14,7 @@ Install the Skill through the Codex Skill installer, then install the pinned
 runtime and its PDF browser in the active environment:
 
 ```powershell
-python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.3"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.4"
 playwright install chromium
 ```
 
@@ -31,13 +31,13 @@ one-time setup, omit `--config`; the CLI reuses that file automatically. Set
 `BIA_BRIEF_CONFIG` only when a different configuration is needed.
 
 The runtime is not published to PyPI yet, so the immutable Git tag used above
-is the install source; `pip install "bia-brief==0.2.3"` fails with
+is the install source; `pip install "bia-brief==0.2.4"` fails with
 `No matching distribution found`. Install this release or newer, because
 `v0.2.1` and earlier still carry the previous page background. Once the
 release reaches PyPI, the shorter form replaces the Git tag:
 
 ```powershell
-python -m pip install "bia-brief==0.2.3"
+python -m pip install "bia-brief==0.2.4"
 ```
 
 ## Run a report
@@ -51,7 +51,7 @@ python -m pip install "bia-brief==0.2.3"
    bia-brief-doctor --project <project-path>
    ```
 
-4. If `bia-brief` is missing, install the pinned `0.2.3` release and Chromium
+4. If `bia-brief` is missing, install the pinned `0.2.4` release and Chromium
    as described above.
 5. If report generation reports that model configuration is missing, ask the
    user to complete `bia-brief-setup` once. Do not read, print, or echo API
