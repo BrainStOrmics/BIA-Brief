@@ -143,7 +143,7 @@ python scripts/doctor.py --project my_project
 ### 4. Generate report :rocket:
 
 ```powershell
-# Preview the background sent to the model
+# Preview the background sent to the model (requires a model config)
 python scripts/run_project.py my_project --print-background
 
 # Generate full report
@@ -153,11 +153,14 @@ python scripts/run_project.py my_project
 ### 5. Output :tada:
 
 ```
-projects/my_project/output/
-├── report.md
-├── report.pdf
-├── report.tex
-└── index.md
+projects/my_project/
+├── index.md              # indexer output: captions and section summaries
+└── output/
+    ├── report.md
+    ├── report.pdf
+    ├── report.tex
+    ├── report.md.outline # outline written for the human review
+    └── report.md.title
 ```
 
 A copy of the final PDF is also placed in `deliverables/<report-title>.pdf`.
@@ -202,7 +205,8 @@ SAMPLE001
 ...
 ```
 
-Preview the assembled background without running the model:
+Preview the assembled background without running the model. The models are
+not called, but a model configuration must exist:
 
 ```powershell
 python scripts/run_project.py my_project --print-background
@@ -233,10 +237,12 @@ python scripts/run_batch.py project_a project_b
 | `--template spatial` | Template key from `run_config.yaml` (scRNA, spatial, standard) |
 | `--lang en` | Output language |
 | `--background "..."` | Override the auto-built background text |
-| `--print-background` | Preview background without running the pipeline |
+| `--print-background` | Preview background without running the pipeline (needs a model config) |
 | `--interactive-review` | Enable manual HITL review prompts |
 | `--no-delivery-copy` | Skip copying PDF to `deliverables/` |
 | `--runner-config run_config.yaml` | Custom runner config path |
+| `--config model.yaml` | Model config to use instead of the saved one |
+| `--project-id my_id` | Project id to record in the report |
 | `--stop-on-failure` | (Batch) abort on first error |
 
 ---
@@ -308,7 +314,7 @@ with sensible defaults and is overridden with `--runner-config`.
 | :x: Doctor reports missing project | Project lacks `figures/` or `pics/` directory |
 | :x: Template not found | Wrong key or path — use `templates/scRNA/report.md`, `templates/spatial/report.md`, or `templates/standard/report.md` |
 | :x: Chinese text garbled in PDF | Missing Chinese font — ensure `ctex` LaTeX package or system CJK font |
-| :x: Indexer returns empty cache miss | Multi-modal model unavailable — check API key and base URL in `config.yaml` |
+| :x: Indexer returns nothing | Multi-modal model unavailable — check API key and base URL in `config.yaml` |
 | :x: GBK encoding error on Windows | Set `PYTHONIOENCODING=utf-8` or use a UTF-8 terminal |
 
 ---

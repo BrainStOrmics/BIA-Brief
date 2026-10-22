@@ -140,7 +140,7 @@ python scripts/doctor.py --project my_project
 ### 4. 生成报告 🚀
 
 ```powershell
-# 预览将要传给模型的背景文本
+# 预览将要传给模型的背景文本（需要已有模型配置）
 python scripts/run_project.py my_project --print-background
 
 # 生成完整报告
@@ -150,11 +150,14 @@ python scripts/run_project.py my_project
 ### 5. 输出文件 🎉
 
 ```
-projects/my_project/output/
-├── report.md
-├── report.pdf
-├── report.tex
-└── index.md
+projects/my_project/
+├── index.md              # Indexer 产物：图注与段落摘要
+└── output/
+    ├── report.md
+    ├── report.pdf
+    ├── report.tex
+    ├── report.md.outline # 供人工审阅的大纲
+    └── report.md.title
 ```
 
 最终 PDF 还会自动复制到 `deliverables/<报告标题>.pdf`。
@@ -199,7 +202,7 @@ SAMPLE001
 ...
 ```
 
-预览组装的背景文本：
+预览组装的背景文本。该命令不会调用模型，但必须已存在模型配置：
 
 ```powershell
 python scripts/run_project.py my_project --print-background
@@ -230,10 +233,12 @@ python scripts/run_batch.py project_a project_b
 | `--template spatial`       | 使用`run_config.yaml` 中的模板别名（scRNA, spatial, standard） |
 | `--lang en`                | 输出语言                                                           |
 | `--background "..."`       | 覆盖自动构建的背景文本                                             |
-| `--print-background`       | 预览背景文本，不运行流水线                                         |
+| `--print-background`       | 预览背景文本，不运行流水线（需要已有模型配置）                     |
 | `--interactive-review`     | 开启人工审阅（HITL）                                               |
 | `--no-delivery-copy`       | 不复制 PDF 到`deliverables/`                                     |
 | `--runner-config run_config.yaml` | 指定运行配置路径                                                   |
+| `--config model.yaml`      | 指定模型配置文件，不使用已保存的那份                               |
+| `--project-id my_id`        | 指定报告中记录的项目 id                                           |
 | `--stop-on-failure`        | （批量）首次失败即停止                                             |
 
 ---
