@@ -1,7 +1,4 @@
-import os
 import yaml
-
-current_file_path  = os.path.abspath(__file__)
 
 # LLM Configuration
 class llm_config:
@@ -24,25 +21,11 @@ class llm_config:
     ENABLE_THINKING = True
     ENABLE_SEARCH = False
 
-# Agent Configuration
-## Brief
-class brief_config:
-    PROJECT_ID = "p01"
-    PROJECT_PATH = ""       # Root dir containing pics/ or figures/, and optional scripts/
-    REPORT_TEMPLATE = ""    # Path to report template markdown
-    OUTPUT_DIR = "output"   # Output directory (relative to PROJECT_PATH)
-
-# class synthesist_config:
-
-# class thesis_config:
-
-
 
     
 def load_yaml_config(yaml_path):
     config_mappings = [
         ("llm_config", llm_config),
-        ("brief_config", brief_config),
     ]
 
     with open(yaml_path,'r') as f:
