@@ -49,6 +49,7 @@ def test_readmes_pin_the_current_release() -> None:
         REPO_ROOT / "README.md",
         REPO_ROOT / "README.zh-CN.md",
         _skill_file("README.md"),
+        _skill_file("README.zh-CN.md"),
     ]
 
     for readme in readmes:
