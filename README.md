@@ -28,7 +28,7 @@ Optimized for single-cell / single-nucleus transcriptomics (scRNA-seq, snRNA-seq
 ```text
 src/Brief/               core library
   ├── pipeline/          runner config & project info parser
-  ├── tools/             indexer, file ops, outline review
+  ├── tools/             indexer, outline review
   ├── utils/             post-process, PDF, LaTeX, template
   ├── agent.py           DeepAgents report agent adapter
   ├── pipeline/agent_runtime.py  runtime assembly and virtual filesystem seam
@@ -62,7 +62,7 @@ flowchart LR
 | :mag: **Indexer** | `tools/indexer_tool.py` | Scans `pics/` and `scripts/`, classifies each figure by analysis step (QC :arrow_right: HVG :arrow_right: PCA :arrow_right: Clustering :arrow_right: Markers :arrow_right: Annotation :arrow_right: PAGA), generates captions and section summaries via multi-modal LLM. Cached by SHA256 of background+language. |
 | :robot: **Agent** | `agent.py`, `pipeline/agent_runtime.py` | DeepAgents runtime with built-in filesystem/todo/task tools, a dedicated Indexer sub-agent, and the business tool `review_outline`. Reads `index.md`, follows prompt guides, and writes the report body into `{{Body_Content}}`. |
 | :busts_in_silhouette: **HITL** | `core.py` | Interrupt-based human review triggered inside `run_indexer` and `review_outline`. Threading.Timer (Windows) / SIGALRM (POSIX) with configurable timeout. Bypassed with `BRIEF_AUTO_APPROVE=1` for batch runs. |
-| :wrench: **Post-process** | `utils/postprocess.py` | Base64 figure embedding, automatic renumbering (start_index=2), paragraph wrapping. |
+| :wrench: **Post-process** | `utils/postprocess.py` | Figure embedding, automatic renumbering (start_index=2), paragraph wrapping. |
 | :framed_picture: **Template** | `utils/parse_md_template.py` | Single-pass regex substitution of `{{Placeholder}}` values. No Jinja2 dependency. |
 | :page_with_curl: **PDF** | `utils/md_to_pdf.py` | Playwright Chromium: cover page (no page numbers) + body (page numbers, watermark). TOC page numbers from heading positions. |
 | :memo: **LaTeX** | `utils/md_to_latex.py` | Stdlib-only converter. `ctex` for Chinese. Compile with `xelatex report.tex` (two passes for TOC). |

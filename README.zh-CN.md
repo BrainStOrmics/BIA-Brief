@@ -28,7 +28,7 @@ English version: [README.md](README.md)
 ```text
 src/Brief/               核心库
   ├── pipeline/          运行配置解析、项目信息背景组装
-  ├── tools/             Indexer、文件操作、大纲审阅
+  ├── tools/             Indexer、大纲审阅
   ├── utils/             后处理、PDF、LaTeX、模板渲染
   ├── agent.py           DeepAgents 报告 Agent 适配器
   ├── pipeline/agent_runtime.py  运行时装配和虚拟文件 seam
@@ -62,7 +62,7 @@ flowchart LR
 | 🔍 **Indexer** | `tools/indexer_tool.py`      | 扫描`pics/` 和 `scripts/`，按分析步骤（QC ➡️ HVG ➡️ PCA ➡️ Clustering ➡️ Markers ➡️ Annotation ➡️ PAGA）对图片分类，通过多模态模型生成描述和段落摘要。结果按 SHA256（background+lang）缓存。                          |
 | 🤖 **Agent**   | `agent.py`、`pipeline/agent_runtime.py` | DeepAgents 编排层，使用内置文件/todo/task 工具，并将 Indexer 拆为子 Agent；读取 `index.md`，依据 prompt 规范撰写报告正文并填入 `{{Body_Content}}`。 |
 | 👥 **HITL**    | `core.py`                    | 基于 interrupt 的人工审阅机制。Windows 用`threading.Timer`，POSIX 用 `SIGALRM`，支持超时自动继续。批量模式下通过 `BRIEF_AUTO_APPROVE=1` 跳过。                                                                                  |
-| 🔧 **后处理**  | `utils/postprocess.py`       | Base64 图片嵌入、自动重编号（从 2 开始）、段落包装。                                                                                                                                                                                  |
+| 🔧 **后处理**  | `utils/postprocess.py`       | 图片嵌入、自动重编号（从 2 开始）、段落包装。                                                                                                                                                                                  |
 | 🖼 **模板**    | `utils/parse_md_template.py` | 单遍正则替换`{{Placeholder}}`，无 Jinja2 依赖。                                                                                                                                                                                     |
 | 📃 **PDF**     | `utils/md_to_pdf.py`         | Playwright Chromium 渲染：封面无页码 + 正文有页码和水印，目录页码从标题位置测量。                                                                                                                                                     |
 | 📝 **LaTeX**   | `utils/md_to_latex.py`       | 纯标准库实现。中文通过`ctex` 支持，`xelatex report.tex` 编译（两次生成目录）。                                                                                                                                                    |
