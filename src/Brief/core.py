@@ -17,6 +17,7 @@ from langgraph.types import Checkpointer, Command
 from langgraph.store.base import BaseStore
 
 from .pipeline.agent_runtime import build_report_agent, to_virtual_path
+from .pipeline.project_info_background import read_report_title
 from .utils.postprocess import (
     build_template_fields,
     embed_figures_in_body,
@@ -70,6 +71,17 @@ class AgentStepPrinter:
         preview = text[:120].replace("\n", " ")
         suffix = "..." if len(text) > 120 else ""
         print(f"  {_GREEN}→ AI:{_RESET} {_GRAY}{preview}{suffix}{_RESET}", flush=True)
+
+
+def _read_agent_title(title_path: str) -> str:
+    """Read the agent-written report title, if the agent produced one."""
+    path = Path(title_path)
+    if not path.is_file():
+        return ""
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.strip():
+            return line.strip()
+    return ""
 
 
 def _wait_for_human_review(prompt_msg: str, timeout: int = 300) -> str:
@@ -187,7 +199,7 @@ class Brief:
 
     Uses Indexer + ReAct Agent architecture:
     1. Indexer scans project files and generates captions/summaries → index.md
-    2. ReAct Agent reads index.md, generates thesis and assembles report
+    2. ReAct Agent reads index.md and assembles the report body
     3. Post-processing handles figure embedding, paragraph wrapping, template rendering
     4. PDF conversion
     """
@@ -233,7 +245,7 @@ class Brief:
         Args:
             background: Research background description.
             output_lang: Output language (e.g., "zh-CN", "en").
-            custom_title: Optional custom report title. If provided, overrides the agent-generated title.
+            custom_title: Optional custom report title. If provided, overrides the title read from project_info.md.
             project_path: Optional project root containing images/scripts/tables.
             report_template: Optional report template path.
             output_dir: Optional report output directory name.
@@ -244,6 +256,8 @@ class Brief:
         """
         # Resolve output path
         output_path = str(Path(project_path) / output_dir / "report.md")
+        outline_path = str(Path(project_path) / output_dir / "report.md.outline")
+        title_path = str(Path(project_path) / output_dir / "report.md.title")
         index_path = str(Path(project_path) / "index.md")
 
         # DeepAgents owns filesystem, todo, and task tools. Business tools and
@@ -273,11 +287,15 @@ class Brief:
         report_guide_virtual_path = to_virtual_path(report_guide_path, repo_root)
         virtual_project_path = to_virtual_path(project_path, repo_root)
         virtual_output_path = to_virtual_path(output_path, repo_root)
+        virtual_outline_path = to_virtual_path(outline_path, repo_root)
+        virtual_title_path = to_virtual_path(title_path, repo_root)
         user_msg = (
             f"Generate a bioinformatics report.\n\n"
             f"Background: {background}\n"
             f"Output language: {output_lang}\n"
             f"Output path: {virtual_output_path}\n"
+            f"Outline path: {virtual_outline_path}\n"
+            f"Title path: {virtual_title_path}\n"
             f"Project path: {virtual_project_path}\n"
             f"Report guide path: {report_guide_virtual_path}\n"
         )
@@ -331,20 +349,15 @@ class Brief:
 
         # Step 5: Template rendering
         logger.info("Step 5: Rendering template...")
-        # Title source: custom_title > project_info.md > project_id
+        # Title source: project_info.md > agent title file > project_id.
+        # The contract name in project_info.md is authoritative; the
+        # agent-written title only fills in when that field is absent.
         if custom_title:
             report_title = custom_title
         else:
-            project_info_path = Path(project_path) / "project_info.md"
-            report_title = ""
-            if project_info_path.exists():
-                try:
-                    for line in project_info_path.read_text(encoding="utf-8").splitlines():
-                        if line.startswith("报告名称"):
-                            report_title = line.split("：", 1)[-1].split(":", 1)[-1].strip()
-                            break
-                except Exception as e:
-                    logger.warning("Failed to read project_info.md: %s", e)
+            report_title = read_report_title(project_path)
+            if not report_title:
+                report_title = _read_agent_title(title_path)
             if not report_title:
                 report_title = project_id
 
@@ -399,6 +412,7 @@ class Brief:
         report_dict["report_pdf_path"] = pdf_path
         report_dict["report_tex_path"] = tex_path
         report_dict["report_md"] = report_md
+        report_dict["report_title"] = report_title
 
         logger.info("Report generation complete: %s", report_output_path)
         return report_md, report_dict

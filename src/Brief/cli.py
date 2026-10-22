@@ -44,27 +44,17 @@ def _resolve_template(value: str, templates: dict[str, str]) -> Path:
     raise FileNotFoundError(f"Template not found: {value}")
 
 
-def _read_report_title(project_path: Path) -> str:
-    info = project_path / "project_info.md"
-    if info.is_file():
-        for line in info.read_text(encoding="utf-8").splitlines():
-            match = re.match(r"^报告名称\s*[:：]\s*(.*)$", line)
-            if match and match.group(1).strip():
-                return match.group(1).strip()
-    return project_path.name
-
-
 def _safe_pdf_name(title: str) -> str:
     cleaned = re.sub(r'[<>:"/\\|?*\r\n\t]+', "_", title).strip(" ._")
     return f"{cleaned or 'report'}.pdf"
 
 
-def _copy_delivery_pdf(pdf_path: str, project_path: Path, delivery_dir: Path) -> Path | None:
+def _copy_delivery_pdf(pdf_path: str, title: str, delivery_dir: Path) -> Path | None:
     source = Path(pdf_path)
     if not source.is_file():
         return None
     delivery_dir.mkdir(parents=True, exist_ok=True)
-    destination = delivery_dir / _safe_pdf_name(_read_report_title(project_path))
+    destination = delivery_dir / _safe_pdf_name(title)
     shutil.copy2(source, destination)
     return destination
 
@@ -154,7 +144,11 @@ def run_project_cli(argv: list[str] | None = None) -> int:
             delivery_root = Path(runtime.get("deliverables_dir", "deliverables"))
             if not delivery_root.is_absolute():
                 delivery_root = Path.cwd() / delivery_root
-            copied = _copy_delivery_pdf(report.get("report_pdf_path", ""), project_path, delivery_root)
+            copied = _copy_delivery_pdf(
+                report.get("report_pdf_path", ""),
+                report.get("report_title", "") or project_id,
+                delivery_root,
+            )
             if copied:
                 print(f"delivery.pdf: {copied}")
         print(f"Completed in {time.time() - started:.1f}s")

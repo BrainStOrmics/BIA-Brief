@@ -71,6 +71,30 @@ def _first_value(fields: dict[str, list[str]], key: str) -> str:
     return values[0].strip() if values else ""
 
 
+def parse_report_title(text: str) -> str:
+    """Return the raw 报告名称 value declared in a project_info.md payload.
+
+    The value is taken verbatim after the first colon so that titles
+    containing a colon are not truncated. An empty string means the field is
+    missing or blank.
+    """
+    for raw_line in text.splitlines():
+        line = _clean_line(raw_line)
+        match = re.match(r"^报告名称\s*[:：]\s*(.*)$", line)
+        if match:
+            return match.group(1).strip()
+    return ""
+
+
+def read_report_title(project_path: str | Path) -> str:
+    """Read the 报告名称 field from a project's project_info.md."""
+    info_path = Path(project_path) / "project_info.md"
+    if not info_path.is_file():
+        return ""
+    text = info_path.read_text(encoding="utf-8", errors="replace")
+    return parse_report_title(text)
+
+
 def build_project_background(project_path: str | Path, project_id: str | None = None) -> str:
     """Build a standardized factual background from project_info.md."""
     project_root = Path(project_path)
@@ -83,7 +107,7 @@ def build_project_background(project_path: str | Path, project_id: str | None = 
     fields = parse_project_info(text)
 
     project_name = _first_value(fields, "项目名称") or project_root.name
-    report_name = _first_value(fields, "报告名称")
+    report_name = parse_report_title(text)
     contract_no = _first_value(fields, "合同编号")
     species = _first_value(fields, "物种")
     genome = _first_value(fields, "参考基因组")

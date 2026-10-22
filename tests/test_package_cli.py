@@ -42,3 +42,30 @@ def test_project_cli_passes_no_config_for_saved_configuration(
     assert run_project_cli([str(project), "--print-background"]) == 0
     assert seen == [None]
     assert "background" in capsys.readouterr().out
+
+
+def test_delivery_pdf_name_uses_the_resolved_report_title(tmp_path: Path) -> None:
+    """The delivery PDF is named from the same title the cover shows."""
+    from Brief.cli import _copy_delivery_pdf, _safe_pdf_name
+
+    pdf = tmp_path / "report.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    delivery = tmp_path / "deliverables"
+
+    copied = _copy_delivery_pdf(str(pdf), "牛脂肪组织单细胞分析", delivery)
+
+    assert copied is not None
+    assert copied.name == "牛脂肪组织单细胞分析.pdf"
+    assert _safe_pdf_name("牛脂肪组织单细胞分析") == "牛脂肪组织单细胞分析.pdf"
+
+
+def test_delivery_pdf_name_sanitizes_path_separators(tmp_path: Path) -> None:
+    from Brief.cli import _copy_delivery_pdf
+
+    pdf = tmp_path / "report.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+
+    copied = _copy_delivery_pdf(str(pdf), "a/b:c", tmp_path / "deliverables")
+
+    assert copied is not None
+    assert copied.name == "a_b_c.pdf"

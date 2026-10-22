@@ -37,7 +37,8 @@ Use `write_todos` with exactly these tasks:
 
 ## Step 4: Generate and Review Outline
 
-Use `write_file` to save the outline to `report.md.outline`. The outline is the
+Use `write_file` to save the outline to the outline path supplied in the user
+message. Do not invent a different path or file name. The outline is the
 single source of truth for figure order and numbering. Number dynamic figures
 from 2 because figure 1 is supplied by the template.
 
@@ -73,8 +74,9 @@ Mark the second todo complete after the body is assembled.
 
 ## Step 6: Write Output
 
-Use `write_file` to save the body to the requested `report.md` path. Also write
-one short report title line to `report.md.title`. Mark the third todo complete.
+Use `write_file` to save the body to the output path supplied in the user
+message. Also write one short report title line to the title path supplied in
+the user message. Mark the third todo complete.
 
 ## Step 7: Confirm
 
