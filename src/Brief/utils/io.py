@@ -15,12 +15,6 @@ def check_file_exists(file_path):
 def check_image_exists(image_path):
     return check_file_exists(image_path)
 
-# local image to base64
-def image_to_base64(image_path):
-    with open(image_path, "rb") as image_file:
-        image_base64 = base64.b64encode(image_file.read()).decode("utf-8")
-    return image_base64
-
 
 def _trim_image_whitespace(image, threshold: int = 245):
     """Crop near-white margins from a figure when possible."""
@@ -127,12 +121,6 @@ def image_to_base64_for_llm(
     return encoded_text, mime_type
 
 
-# 帮我写一个代码，以文本形式读取代码文件
-def read_code_file(file_path):
-    with open(file_path, "r", encoding="utf-8") as file:
-        code_content = file.read()
-    return code_content
-
 
 def load_report_template_file(report_template: str, project_path: str):
     """Resolve and read a report template file from absolute or relative path."""
@@ -162,23 +150,3 @@ def load_report_template_file(report_template: str, project_path: str):
         report_template_text = f.read()
 
     return report_template_text, str(resolved_template_path)
-
-def tree_dir(
-        target_dir, 
-        prefix: str = '',
-        exclude_dirs: list[str] = None):
-    "print directory tree"
-    if exclude_dirs is None:
-        # Exclude unused directories
-        exclude_dirs = ['__pycache__', 'venv', '.venv']
-        
-    path = Path(target_dir)
-    contents = sorted([p for p in path.iterdir() if p.name not in exclude_dirs])
-    
-    pointers = ['├── '] * (len(contents) - 1) + ['└── ']
-    for pointer, child in zip(pointers, contents):
-        print(prefix + pointer + child.name)
-        if child.is_dir():
-            extension = '│   ' if pointer == '├── ' else '    '
-            tree_dir(child, prefix + extension, exclude_dirs)
-
