@@ -4,7 +4,7 @@
 ——一个装着分析图、脚本和元数据的文件夹——变成一份成稿报告，输出 Markdown、PDF
 和 LaTeX 三种格式。
 
-Skill 只包含工作流说明。报告引擎是 `bia-brief` Python 包，需要单独安装，版本固定为 0.2.2。
+Skill 只包含工作流说明。报告引擎是 `bia-brief` Python 包，需要单独安装，版本固定为 0.2.3。
 
 有两种用法：
 
@@ -29,16 +29,16 @@ English version: [README.md](README.md)
 然后在将要生成报告的环境里安装版本固定的运行时：
 
 ```powershell
-python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.2"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.3"
 playwright install chromium
 ```
 
 运行时尚未发布到 PyPI，因此唯一可用的安装来源是不可变的 Git tag。
-`pip install "bia-brief==0.2.2"` 目前会以 `No matching distribution found` 失败。
+`pip install "bia-brief==0.2.3"` 目前会以 `No matching distribution found` 失败。
 等版本发布到 PyPI 后，可以改用更短的写法：
 
 ```powershell
-python -m pip install "bia-brief==0.2.2"
+python -m pip install "bia-brief==0.2.3"
 ```
 
 ## 一次性配置模型
@@ -136,7 +136,7 @@ PDF 还会被复制到仓库级的 `deliverables/` 目录，文件名取自 `pro
 |---|---|
 | PDF 导出失败 | 未安装 Playwright Chromium（`playwright install chromium`） |
 | Doctor 提示项目缺失 | 项目缺少 `figures/` 或 `pics/` 目录 |
-| `pip install "bia-brief==0.2.2"` 失败 | 该版本尚未发布到 PyPI —— 改用上面的 Git tag 命令 |
+| `pip install "bia-brief==0.2.3"` 失败 | 该版本尚未发布到 PyPI —— 改用上面的 Git tag 命令 |
 | 找不到模板 | 模板别名或路径错误 —— 使用 `templates/scRNA/report.md`、`templates/spatial/report.md` 或 `templates/standard/report.md` |
 | PDF 中中文乱码 | 缺少中文字体 —— 确保已安装 `ctex` LaTeX 包或系统 CJK 字体 |
 | 索引器没有返回结果 | 视觉模型不可用 —— 检查 `config.yaml` 里的 API key 和接口地址 |
@@ -198,11 +198,11 @@ Playwright Chromium、对项目目录的文件系统访问权限，以及兼容 
 示例统一使用 PowerShell，因为维护用的回归环境是 Windows。在 POSIX 系统上，请改用对应
 shell 的等价的激活与路径写法；该 Python 包同时支持 Windows 与 POSIX 的审批计时器。
 
-Skill 的维护分支是 `codex/bia-brief-skill`。运行时发行版可从不可变的 `v0.2.2` Git tag 获取：
+Skill 的维护分支是 `codex/bia-brief-skill`。运行时发行版可从不可变的 `v0.2.3` Git tag 获取：
 
 ```text
 https://github.com/BrainStOrmics/BIA-Brief/tree/codex/bia-brief-skill
-https://github.com/BrainStOrmics/BIA-Brief/tree/v0.2.2
+https://github.com/BrainStOrmics/BIA-Brief/tree/v0.2.3
 ```
 
 `v0.2.2` 是第一个报告页面采用纯白底色的版本，图片不会再呈现为贴在略深页面上的白色矩形。

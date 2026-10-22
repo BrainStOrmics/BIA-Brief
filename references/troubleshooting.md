@@ -4,7 +4,7 @@
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `No matching distribution found` | The release is not on PyPI yet | Install from the immutable tag: `python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.2"` |
+| `No matching distribution found` | The release is not on PyPI yet | Install from the immutable tag: `python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.3"` |
 | `Model config is required. Run bia-brief-setup once, or pass --config.` | No model configuration was found | Run `bia-brief-setup`, or pass `--config <path>` / set `BIA_BRIEF_CONFIG` |
 | `Model config not found: <path>` | The given config path does not exist | Correct the path; the lookup order is `--config`, `BIA_BRIEF_CONFIG`, `~/.bia-brief/config.yaml`, then the legacy checkout config |
 | `FAIL dependency: <module>` in `bia-brief-doctor` | A Python dependency is missing | Reinstall the runtime; the checked modules are `deepagents`, `langchain_core`, `langchain_openai`, `langgraph`, `yaml`, and `pypdf` |
