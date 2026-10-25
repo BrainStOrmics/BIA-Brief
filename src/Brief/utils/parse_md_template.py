@@ -21,14 +21,21 @@ def _template_assets_root() -> Path:
 
 def _relative_path_from_report(path_text: str, report_output_dir: Path) -> str:
     source = Path(path_text).expanduser().resolve()
-    return os.path.relpath(source, start=report_output_dir).replace("\\", "/")
+    try:
+        return os.path.relpath(source, start=report_output_dir).replace("\\", "/")
+    except ValueError:
+        # Windows cannot form a relative path across drive letters. A file URI
+        # remains valid for both Markdown preview and Playwright rendering.
+        return source.as_uri()
 
 
 def _build_template_context(
     cover_image_md_path: str,
     template_fields: dict[str, Any] | None = None,
+    project_id: str = "",
 ) -> dict[str, str]:
     context = {
+        "Project_ID": project_id,
         "Cover_Report_Date": datetime.now().strftime("%Y-%m-%d"),
         "Cover_Image_Path": cover_image_md_path,
         "Cover_Report_Title": "",
@@ -92,7 +99,13 @@ def render_report_markdown(
     template_context = _build_template_context(
         cover_image_md_path=cover_image_md_path,
         template_fields=template_fields,
+        project_id=project_id,
     )
+
+    placeholders = set(re.findall(r"{{\s*([^{}]+?)\s*}}", report_template_text))
+    missing_fields = sorted(placeholders - set(template_context))
+    if missing_fields:
+        raise ValueError(f"Report template has unfilled placeholders: {', '.join(missing_fields)}")
 
     report_md = re.sub(
         r"{{\s*([^{}]+?)\s*}}",

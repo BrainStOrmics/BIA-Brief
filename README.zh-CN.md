@@ -2,7 +2,7 @@
 
 **自动化生物信息学报告生成工具。** BIA-Brief 将项目图片、脚本和元数据转化为结构化、可发表的 Markdown、PDF 和 LaTeX 报告，只需极少量人工介入。
 
-针对单细胞 / 单细胞核转录组（scRNA-seq, snRNA-seq）优化，同时通过可扩展模板系统支持空间转录组、商业分析流程和自定义场景。
+以单细胞 / 单细胞核转录组（scRNA-seq, snRNA-seq）为主，同时为 DNBelab C4、实验性空间转录组和自定义模板提供显式正文 profile。
 
 English version: [README.md](README.md)
 
@@ -16,7 +16,7 @@ English version: [README.md](README.md)
 - 👥 **人在回路（HITL）** — 在 Indexer 输出和大纲生成阶段可选人工审阅，支持超时自动继续
 - :brain: **智能背景组装** — 结构化 `project_info.md` → 确定性的标准化背景文本；用 `项目简介` 补充具体研究语境
 - 📄 **多格式导出** — Markdown、PDF（Playwright Chromium）、LaTeX（纯标准库，`ctex` 中文支持）
-- 🎨 **模板系统** — 可复用的 `{{Placeholder}}` 模板引擎；内置 scRNA、spatial、standard 三套模板
+- 🎨 **模板系统** — 可复用的 `{{Placeholder}}` 模板引擎；每个模板同时声明正文 guide、图号起点和必需占位符
 - :stethoscope: **项目健康检查** — `doctor.py` 一秒内完成环境、配置、模板和项目结构验证
 - 🏃 **批量处理** — 支持多项目顺序运行，自动审阅通过，集中日志
 - 📦 **交付物管理** — 生成 PDF 自动归档到统一 `deliverables/` 目录
@@ -40,7 +40,7 @@ project_template/        新项目骨架
 templates/               报告模板和共享资源
   ├── scRNA/             单细胞转录组
   ├── spatial/           空间转录组
-  ├── standard/          标准 Markdown 输出参考
+  ├── standard/          DNBelab C4 单细胞兼容布局
   └── assets/            共享品牌元素
 docs/examples/           参考样例文件
 dist/                    本地构建的 wheel 文件
@@ -61,7 +61,7 @@ flowchart LR
 | -------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 🔍 **Indexer** | `tools/indexer_tool.py`      | 扫描`pics/` 和 `scripts/`，按分析步骤（QC ➡️ HVG ➡️ PCA ➡️ Clustering ➡️ Markers ➡️ Annotation ➡️ PAGA）对图片分类，通过多模态模型生成描述和段落摘要。结果按 SHA256（background+lang）缓存。                          |
 | 🤖 **Agent**   | `agent.py`、`pipeline/agent_runtime.py` | DeepAgents 编排层，使用内置文件/todo/task 工具，并将 Indexer 拆为子 Agent；读取 `index.md`，依据 prompt 规范撰写报告正文并填入 `{{Body_Content}}`。 |
-| 👥 **HITL**    | `core.py`                    | 基于 interrupt 的人工审阅机制。Windows 用`threading.Timer`，POSIX 用 `SIGALRM`，支持超时自动继续。批量模式下通过 `BRIEF_AUTO_APPROVE=1` 跳过。                                                                                  |
+| 👥 **HITL**    | `core.py`、`pipeline/review_gate.py` | 单一 ReviewGate 统一处理提示、`review_timeout`、Windows/POSIX 输入和 resume feedback；显式 `--interactive-review` 会覆盖环境自动批准。 |
 | 🔧 **后处理**  | `utils/postprocess.py`       | 图片嵌入、自动重编号（从 2 开始）、段落包装。                                                                                                                                                                                  |
 | 🖼 **模板**    | `utils/parse_md_template.py` | 单遍正则替换`{{Placeholder}}`，无 Jinja2 依赖。                                                                                                                                                                                     |
 | 📃 **PDF**     | `utils/md_to_pdf.py`         | Playwright Chromium 渲染：封面无页码 + 正文有页码和水印，目录页码从标题位置测量。                                                                                                                                                     |
@@ -79,12 +79,18 @@ flowchart LR
 
 ## 快速开始
 
-在当前环境安装 BIA-Brief：
+当前包尚未发布到 PyPI，请使用不可变的 Git tag 安装：
 
 ```powershell
-python -m pip install "bia-brief==0.2.4"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.5"
 playwright install chromium
 bia-brief-setup
+```
+
+发布到 PyPI 后可使用：
+
+```powershell
+python -m pip install "bia-brief==0.2.5"
 ```
 
 首次运行 `bia-brief-setup` 时配置文本模型和视觉模型。向导把配置保存到
@@ -184,7 +190,7 @@ projects/<project_id>/
 
 ### `project_info.md` 📝
 
-该文件是报告 Agent 获取项目背景的主要来源。用户填写的字段会被直接使用；空字段会被跳过，不会由 LLM 自动补全。`项目简介` 是补充生物学问题、组织/细胞背景和项目特异解读目标的主要位置。
+该文件是报告 Agent 获取项目背景的主要来源。用户填写的字段会被直接使用；空字段会被跳过，不会由 LLM 自动补全。`项目简介` 等自由文本会保留逗号、分号和续行，是补充生物学问题、组织/细胞背景和项目特异解读目标的主要位置。
 
 建议字段：
 
@@ -230,11 +236,11 @@ python scripts/run_batch.py project_a project_b
 
 | 参数                         | 作用                                                               |
 | ---------------------------- | ------------------------------------------------------------------ |
-| `--template spatial`       | 使用`run_config.yaml` 中的模板别名（scRNA, spatial, standard） |
+| `--template spatial`       | 使用 `run_config.yaml` 中的模板别名（`scRNA`、`dnbc4`、`standard`、`spatial`） |
 | `--lang en`                | 输出语言                                                           |
 | `--background "..."`       | 覆盖自动构建的背景文本                                             |
 | `--print-background`       | 预览背景文本，不运行流水线（需要已有模型配置）                     |
-| `--interactive-review`     | 开启人工审阅（HITL）                                               |
+| `--interactive-review`     | 开启人工审阅，并让非空大纲反馈参与后续修订                         |
 | `--no-delivery-copy`       | 不复制 PDF 到`deliverables/`                                     |
 | `--runner-config run_config.yaml` | 指定运行配置路径                                                   |
 | `--config model.yaml`      | 指定模型配置文件，不使用已保存的那份                               |
@@ -250,8 +256,8 @@ python scripts/run_batch.py project_a project_b
 ```
 templates/
 ├── scRNA/             单细胞转录组
-├── spatial/           空间转录组
-├── standard/         标准 Markdown 输出参考
+├── spatial/           实验性空间转录组 profile
+├── standard/          DNBelab C4 单细胞兼容布局
 └── assets/
     └── BGI_SY/        共享品牌资源（封面、logo、技术方法图）
 ```
@@ -263,13 +269,16 @@ python scripts/run_project.py my_project --template spatial
 python scripts/run_project.py my_project --template templates/scRNA/report.md
 ```
 
+`scRNA` 是稳定 profile；`dnbc4` 使用 DNBelab C4 单细胞布局，`standard` 是它的兼容别名；
+`spatial` 使用独立空间 guide，目前仍标记为实验性；自定义模板路径使用 generic profile。
+
 ---
 
 ## 配置体系：双层结构 ⚙️
 
 | 层级             | 文件                             | 用途                                                  |
 | ---------------- | -------------------------------- | ----------------------------------------------------- |
-| **运行层** | `run_config.yaml`              | 项目根目录、默认模板/语言、批量日志目录、自动审阅行为 |
+| **运行层** | `run_config.yaml`              | 项目根目录、默认模板/语言、批量日志目录、审阅超时和自动批准行为 |
 | **模型层** | `~/.bia-brief/config.yaml` | API 密钥、接口地址、模型名称、think/search 开关       |
 
 首次运行 `bia-brief-setup` 会创建用户级模型配置。后续运行自动查找该文件；如需切换配置，

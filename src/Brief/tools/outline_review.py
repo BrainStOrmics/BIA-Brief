@@ -25,7 +25,7 @@ def create_outline_review_tool() -> Callable:
         Returns:
             Reviewer feedback string from resume value.
         """
-        interrupt({
+        feedback = interrupt({
             "type": "outline_review",
             "outline_path": outline_path,
             "message": (
@@ -33,6 +33,6 @@ def create_outline_review_tool() -> Callable:
                 "确认章节结构和图号分配。如有修改意见请输入，通过则按 Enter 继续。"
             ),
         })
-        return "Outline 审阅完成"
+        return str(feedback or "").strip() or "Outline 审阅通过"
 
     return review_outline

@@ -16,7 +16,7 @@ Optimized for single-cell / single-nucleus transcriptomics (scRNA-seq, snRNA-seq
 - :busts_in_silhouette: **Human-in-the-Loop (HITL)** — optional interactive review at key stages (indexer output, report outline) with configurable timeout
 - :brain: **Smart background assembly** — structured `project_info.md` → deterministic standardized background text; use `项目简介` for domain-specific context
 - :page_facing_up: **Multi-format export** — Markdown, PDF (Playwright Chromium), LaTeX (stdlib-only, `ctex` for Chinese)
-- :art: **Template system** — reusable templates with `{{Placeholder}}` substitution; built-in families for scRNA-seq, spatial, and standard output
+- :art: **Template system** — reusable templates with `{{Placeholder}}` substitution and explicit body profiles for scRNA-seq, DNBelab C4 compatibility output, spatial, and custom templates
 - :stethoscope: **Project health checks** — `doctor.py` validates environment, config, templates, and project structure in under one second
 - :runner: **Batch processing** — run multiple projects sequentially with auto-approve and centralized logging
 - :package: **Delivery management** — generated PDFs are automatically copied to a centralized `deliverables/` directory
@@ -40,7 +40,7 @@ project_template/        starter skeleton for new projects
 templates/               report templates and shared assets
   ├── scRNA/             single-cell transcriptomics
   ├── spatial/           spatial transcriptomics
-  ├── standard/          standard Markdown output
+  ├── standard/          DNBelab C4 single-cell compatibility layout
   └── assets/            shared branding elements
 docs/examples/           reference sample files
 dist/                    built wheel artifacts (local only)
@@ -61,9 +61,9 @@ flowchart LR
 |---|---|---|
 | :mag: **Indexer** | `tools/indexer_tool.py` | Scans `pics/` and `scripts/`, classifies each figure by analysis step (QC :arrow_right: HVG :arrow_right: PCA :arrow_right: Clustering :arrow_right: Markers :arrow_right: Annotation :arrow_right: PAGA), generates captions and section summaries via multi-modal LLM. Cached by SHA256 of background+language. |
 | :robot: **Agent** | `agent.py`, `pipeline/agent_runtime.py` | DeepAgents runtime with built-in filesystem/todo/task tools, a dedicated Indexer sub-agent, and the business tool `review_outline`. Reads `index.md`, follows prompt guides, and writes the report body into `{{Body_Content}}`. |
-| :busts_in_silhouette: **HITL** | `core.py` | Interrupt-based human review triggered inside `run_indexer` and `review_outline`. Threading.Timer (Windows) / SIGALRM (POSIX) with configurable timeout. Bypassed with `BRIEF_AUTO_APPROVE=1` for batch runs. |
+| :busts_in_silhouette: **HITL** | `core.py`, `pipeline/review_gate.py` | Interrupt-based human review triggered inside `run_indexer` and `review_outline`. A single review gate owns prompts, `review_timeout`, Windows/POSIX input handling, and resume feedback. `--interactive-review` overrides environment auto-approval. |
 | :wrench: **Post-process** | `utils/postprocess.py` | Figure embedding, automatic renumbering (start_index=2), paragraph wrapping. |
-| :framed_picture: **Template** | `utils/parse_md_template.py` | Single-pass regex substitution of `{{Placeholder}}` values. No Jinja2 dependency. |
+| :framed_picture: **Template** | `pipeline/template_spec.py`, `utils/parse_md_template.py` | Resolves a template family, its body guide, figure numbering, and required placeholders. Unknown placeholders fail instead of silently rendering empty. |
 | :page_with_curl: **PDF** | `utils/md_to_pdf.py` | Playwright Chromium: cover page (no page numbers) + body (page numbers, watermark). TOC page numbers from heading positions. |
 | :memo: **LaTeX** | `utils/md_to_latex.py` | Stdlib-only converter. `ctex` for Chinese. Compile with `xelatex report.tex` (two passes for TOC). |
 
@@ -79,12 +79,19 @@ flowchart LR
 
 ## Quick start
 
-Install the package in the active environment:
+Install the package in the active environment. The package is not on PyPI yet,
+so use the immutable release tag:
 
 ```powershell
-python -m pip install "bia-brief==0.2.4"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.5"
 playwright install chromium
 bia-brief-setup
+```
+
+After the release is published to PyPI, the shorter command will be:
+
+```powershell
+python -m pip install "bia-brief==0.2.5"
 ```
 
 The setup wizard stores chat and vision model settings in
@@ -187,7 +194,7 @@ projects/<project_id>/
 
 ### `project_info.md` :memo:
 
-This file drives the background context passed to the report agent. Fields filled in by the user are used directly. Empty fields are skipped; `项目简介` is the main place to provide the biological question, tissue/cell context, and project-specific interpretation target.
+This file drives the background context passed to the report agent. Fields filled in by the user are used directly. Empty fields are skipped. Free-text fields such as `项目简介` preserve commas and continuation lines; `项目简介` is the main place to provide the biological question, tissue/cell context, and project-specific interpretation target.
 
 Recommended fields:
 
@@ -234,11 +241,11 @@ python scripts/run_batch.py project_a project_b
 
 | Flag | Effect |
 |---|---|
-| `--template spatial` | Template key from `run_config.yaml` (scRNA, spatial, standard) |
+| `--template spatial` | Template key from `run_config.yaml` (`scRNA`, `dnbc4`, `standard`, `spatial`) |
 | `--lang en` | Output language |
 | `--background "..."` | Override the auto-built background text |
 | `--print-background` | Preview background without running the pipeline (needs a model config) |
-| `--interactive-review` | Enable manual HITL review prompts |
+| `--interactive-review` | Enable manual HITL review prompts and apply non-empty outline feedback |
 | `--no-delivery-copy` | Skip copying PDF to `deliverables/` |
 | `--runner-config run_config.yaml` | Custom runner config path |
 | `--config model.yaml` | Model config to use instead of the saved one |
@@ -253,9 +260,9 @@ Template families are grouped under `templates/`:
 
 ```
 templates/
-├── scRNA/             # single-cell transcriptomics
-├── spatial/           # spatial transcriptomics
-├── standard/          # standard Markdown output
+├── scRNA/             # stable single-cell transcriptomics
+├── spatial/           # experimental spatial profile
+├── standard/          # DNBelab C4 single-cell compatibility layout
 └── assets/
     └── BGI_SY/        # shared branding assets (covers, logos, workflow figures)
 ```
@@ -267,13 +274,18 @@ python scripts/run_project.py my_project --template spatial
 python scripts/run_project.py my_project --template templates/scRNA/report.md
 ```
 
+`scRNA` is the stable profile. `dnbc4` selects the DNBelab C4 single-cell
+layout, and `standard` is its legacy compatibility alias. `spatial` uses a
+separate spatial guide and is currently marked experimental. Custom template
+paths use the generic profile.
+
 ---
 
 ## Configuration: two-layer system :gear:
 
 | Layer | File | Purpose |
 |---|---|---|
-| **Runner** | `run_config.yaml` | Project root, default template/language, batch log dir, auto-approve behavior |
+| **Runner** | `run_config.yaml` | Project root, default template/language, batch log dir, review timeout, auto-approve behavior |
 | **Model** | `~/.bia-brief/config.yaml` | API keys, base URLs, model names, thinking/search flags |
 
 Run `bia-brief-setup` once to create the user-level model configuration. Later

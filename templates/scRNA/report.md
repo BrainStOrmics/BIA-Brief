@@ -603,7 +603,7 @@ table.report-table td,
 
 ![图片](./BGI_SY/pics/methods_project_flow_sc.png)
 
-<p align='center'>图1 项目流程图。</p>
+<p align='center'>附图1 项目流程图。</p>
 
 ### 2 实验流程
 
@@ -613,7 +613,7 @@ table.report-table td,
 
 ![图片](./BGI_SY/pics/methods_dnbc4_principle.png)
 
-<p align='center'>图2 DNBelab C4单细胞技术原理示意图。</p>
+<p align='center'>附图2 DNBelab C4单细胞技术原理示意图。</p>
 
 #### 2.2 测序文库结构
 
@@ -621,7 +621,7 @@ table.report-table td,
 
 ![图片](./BGI_SY/pics/methods_library_structure_sc.png)
 
-<p align='center'>图3 单细胞测序文库结构示意图。</p>
+<p align='center'>附图3 单细胞测序文库结构示意图。</p>
 
 <p align='center'>Cell Barcode： 用于标识细胞的人工合成核酸序列； UMI： 用于标识从样本组织捕获到的核酸序列； Poly(dT)： 用于与mRNA poly(A)互补配对的序列； Insert： 捕获的RNA片段</p>
 

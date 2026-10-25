@@ -20,7 +20,9 @@ table of contents, sections 1-3, methods, help, FAQ, and references.
 
 Call the `task` tool for the `indexer` sub-agent using the background, output
 language, and output path from the user message. The sub-agent must call
-`run_indexer` exactly once. After it returns, continue to Step 2.
+`run_indexer` exactly once. If `run_indexer` returns review feedback, apply
+that feedback to `index.md` before continuing. After it returns, continue to
+Step 2.
 
 ## Step 2: Load Project Data
 

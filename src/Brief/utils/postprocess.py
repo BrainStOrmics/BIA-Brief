@@ -295,7 +295,11 @@ def wrap_body_paragraphs(body_content: str) -> str:
     return '\n\n'.join(result)
 
 
-def build_template_fields(report_output: dict[str, Any], report_title: str = "") -> dict[str, Any]:
+def build_template_fields(
+    report_output: dict[str, Any],
+    report_title: str = "",
+    project_id: str = "",
+) -> dict[str, Any]:
     """Build template fields dictionary from report output.
 
     Args:
@@ -304,6 +308,7 @@ def build_template_fields(report_output: dict[str, Any], report_title: str = "")
     """
     title = report_title or str(report_output.get("report_title", ""))
     return {
+        "Project_ID": project_id,
         "Report_Title": title,
         "Cover_Report_Title": title,
         "Cover_Copyright_Text": "©2026All Rights Reserved",

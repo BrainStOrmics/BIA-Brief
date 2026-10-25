@@ -291,47 +291,47 @@ table.report-table td,
 <span class='toc-page'>3</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;4 数据标准化</span>
+<span class='toc-item'> &emsp;4 数据质控与标准化</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>3</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;5 高变基因选择和PCA降维</span>
+<span class='toc-item'> &emsp;5 降维聚类与空间域识别</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>5</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;5.1 高变特征筛选</span>
+<span class='toc-item'>&emsp;&emsp;5.1 降维与聚类</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>5</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;5.2 主成分分析</span>
+<span class='toc-item'>&emsp;&emsp;5.2 空间域识别</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>5</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;6 单样本分析</span>
+<span class='toc-item'> &emsp;6 空间表达与细胞类型注释</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>7</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;6.1 细胞聚类</span>
+<span class='toc-item'>&emsp;&emsp;6.1 空间表达模式</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>7</span>
 </div>
 <div class='toc-line toc-level-1'>
-<span class='toc-item'>&emsp;&emsp;6.2 Marker基因鉴定</span>
+<span class='toc-item'>&emsp;&emsp;6.2 细胞类型注释</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>8</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;7 拟时序分析</span>
+<span class='toc-item'> &emsp;7 空间邻域与细胞通讯</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>10</span>
 </div>
 <div class='toc-line toc-level-0'>
-<span class='toc-item'> &emsp;8 差异基因表达GO和pathway功能分析</span>
+<span class='toc-item'> &emsp;8 差异表达与功能富集</span>
 <span class='toc-dots' aria-hidden='true'></span>
 <span class='toc-page'>11</span>
 </div>
@@ -611,7 +611,7 @@ table.report-table td,
 
 ![图1](./BGI_SY/pics/methods_project_flow.png)
 
-<p align='center'>图1 项目流程图。</p>
+<p align='center'>附图1 项目流程图。</p>
 
 ### 2 实验流程
 
@@ -619,17 +619,17 @@ table.report-table td,
 
 <p style='text-indent:18.20pt'>华大Stereo-seq V2技术是基于空间条形码（spatial barcodes）的高分辨率空间转录组测序平台，其核心原理是在高密度芯片上设计独特的空间条形码阵列，通过组织切片与芯片的直接接触，使组织中的RNA分子与芯片上的空间条形码特异性结合。在测序过程中，每个RNA分子的序列与其对应的空间条形码一同被读取，从而精确确定每个转录本的空间位置。Stereo-seq V2技术实现了亚细胞级的空间分辨率（约1μm），能够同时检测组织切片中成千上万个空间位置的基因表达信息，无需依赖液滴微流控系统，可直接对完整组织切片进行高通量空间转录组分析，为组织微环境中的细胞异质性和空间基因表达模式研究提供了有力工具。</p>
 
-![图2](./BGI_SY/pics/methods_stereo_principle.png)
+![附图2](./BGI_SY/pics/methods_stereo_principle.png)
 
-<p align='center'>图2 Stereo-seq空间技术原理示意图。</p>
+<p align='center'>附图2 Stereo-seq空间技术原理示意图。</p>
 
 #### 2.2 测序文库结构
 
 <p style='text-indent:18.20pt'>cDNA经PCR扩增、 酶切、 筛选、 再扩增、 成环、 构建可用于DNBSEQ测序的标准文库后， 进行上机测序。 文库结构如下图所示。</p>
 
-![图3](./BGI_SY/pics/methods_library_structure.png)
+![附图3](./BGI_SY/pics/methods_library_structure.png)
 
-<p align='center'>图3 单细胞测序文库结构示意图。</p>
+<p align='center'>附图3 单细胞测序文库结构示意图。</p>
 
 <p align='center'>Cell Barcode： 用于标识细胞的人工合成核酸序列； UMI： 用于标识从样本组织捕获到的核酸序列； Poly(dT)： 用于与mRNA poly(A)互补配对的序列； Insert： 捕获的RNA片段</p>
 

@@ -53,6 +53,23 @@ def test_template_does_not_hardcode_the_report_body(family: str) -> None:
 
 
 @pytest.mark.parametrize("family", FAMILIES)
+def test_template_has_only_one_primary_figure_one_caption(family: str) -> None:
+    """The methods project-flow figure is supplementary, not a second 图1."""
+    text = (TEMPLATE_ROOT / family / "report.md").read_text(encoding="utf-8")
+
+    assert text.count("<p align='center'>图1 ") == 1
+    assert "附图1 项目流程图" in text
+
+
+@pytest.mark.parametrize("family", FAMILIES)
+def test_template_caption_labels_are_unique(family: str) -> None:
+    text = (TEMPLATE_ROOT / family / "report.md").read_text(encoding="utf-8")
+    labels = re.findall(r"<p align='center'>((?:图|附图)\d+) ", text)
+
+    assert len(labels) == len(set(labels))
+
+
+@pytest.mark.parametrize("family", FAMILIES)
 def test_template_references_only_packaged_images(family: str) -> None:
     """Every image a template points at must exist in the packaged assets."""
     text = (TEMPLATE_ROOT / family / "report.md").read_text(encoding="utf-8")

@@ -44,14 +44,17 @@ def create_indexer_tool(
             chat_model=chat_model,
         )
         # Trigger human-in-the-loop interrupt
-        interrupt(
+        feedback = interrupt(
             {
                 "type": "indexer_review",
                 "index_path": index_path,
                 "message": "Indexer 完成，请审阅。编辑后按 Enter 继续...",
             }
         )
-        return index_path
+        review_feedback = str(feedback or "").strip()
+        if review_feedback:
+            return f"index_path: {index_path}\nreview_feedback: {review_feedback}"
+        return f"index_path: {index_path}"
 
     return run_indexer
 

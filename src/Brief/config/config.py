@@ -38,6 +38,7 @@ def load_yaml_config(yaml_path):
             except:
                 default_keys += config_key + "\n"
 
-    print("Following keys are using default:\n"+default_keys+"\n\n")
+    if default_keys:
+        print("Following keys are using default:\n" + default_keys + "\n")
 
 

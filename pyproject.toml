@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "bia-brief"
-version = "0.2.4"
+version = "0.2.5"
 description = "Automated bioinformatics report generation from project figures, scripts, and metadata."
 readme = "README.md"
 requires-python = ">=3.10"

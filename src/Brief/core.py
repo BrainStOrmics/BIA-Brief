@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Type
 
@@ -18,6 +19,8 @@ from langgraph.store.base import BaseStore
 
 from .pipeline.agent_runtime import build_report_agent, to_virtual_path
 from .pipeline.project_info_background import read_report_title
+from .pipeline.review_gate import ReviewGate
+from .pipeline.template_spec import TemplateSpec, infer_template_spec
 from .utils.postprocess import (
     build_template_fields,
     embed_figures_in_body,
@@ -42,6 +45,37 @@ _CYAN = "\033[36m"
 _YELLOW = "\033[33m"
 _GRAY = "\033[90m"
 _RESET = "\033[0m"
+
+
+@dataclass(frozen=True)
+class ExportArtifacts:
+    pdf_path: Path
+    tex_path: Path
+
+
+def _pdf_page_count(path: Path) -> int:
+    from pypdf import PdfReader
+
+    return len(PdfReader(str(path)).pages)
+
+
+def _require_nonempty_file(path: Path, label: str) -> None:
+    if not path.is_file() or path.stat().st_size <= 0:
+        raise RuntimeError(f"{label} was not created: {path}")
+
+
+def _write_report_exports(report_output_path: Path) -> ExportArtifacts:
+    """Create and validate every required export, raising on partial success."""
+    pdf_path = report_output_path.with_suffix(".pdf")
+    build_pdf_from_markdown(report_output_path, pdf_path)
+    _require_nonempty_file(pdf_path, "PDF")
+    if _pdf_page_count(pdf_path) < 1:
+        raise RuntimeError(f"PDF has no pages: {pdf_path}")
+
+    tex_path = report_output_path.with_suffix(".tex")
+    build_latex_from_markdown(report_output_path, tex_path)
+    _require_nonempty_file(tex_path, "LaTeX")
+    return ExportArtifacts(pdf_path=pdf_path, tex_path=tex_path)
 
 
 class AgentStepPrinter:
@@ -84,86 +118,6 @@ def _read_agent_title(title_path: str) -> str:
     return ""
 
 
-def _wait_for_human_review(prompt_msg: str, timeout: int = 300) -> str:
-    """Print prompt, wait for user input with timeout.
-
-    Uses signal.SIGALRM on Linux/macOS, threading.Timer on Windows.
-
-    Args:
-        prompt_msg: Message to display (from interrupt metadata).
-        timeout: Seconds to wait before auto-resume.
-
-    Returns:
-        User feedback string. Timeout returns auto-resume message,
-        EOFError returns approval message.
-
-    Env bypass:
-        Set BRIEF_AUTO_APPROVE=1 to skip the prompt entirely and return
-        an empty approval string immediately. Used by parallel batch runs
-        where interactive HITL is not feasible.
-    """
-    import os
-    import sys
-
-    if os.environ.get("BRIEF_AUTO_APPROVE") == "1":
-        logger.info("HITL auto-approved (BRIEF_AUTO_APPROVE=1): %s", prompt_msg[:80])
-        return ""
-
-    print(f"\n{_GREEN}{'='*60}{_RESET}")
-    print(f"{_GREEN}{prompt_msg}{_RESET}")
-    print(f"{_YELLOW}编辑后按 Enter 继续...（{timeout}s 超时）{_RESET}")
-    print(f"{_GREEN}{'='*60}{_RESET}")
-
-    if sys.platform == "win32":
-        return _wait_for_human_review_windows(timeout)
-    else:
-        return _wait_for_human_review_posix(timeout)
-
-
-def _wait_for_human_review_windows(timeout: int) -> str:
-    """Windows implementation using threading.Timer (no SIGALRM available)."""
-    import threading
-
-    timed_out = threading.Event()
-
-    def _timeout_handler() -> None:
-        timed_out.set()
-        logger.info("Human review timed out, auto-resuming")
-
-    timer = threading.Timer(timeout, _timeout_handler)
-    timer.daemon = True
-    timer.start()
-    try:
-        user_input = input()
-        timer.cancel()
-        if timed_out.is_set():
-            return "审阅超时自动继续（未编辑）"
-        return user_input
-    except EOFError:
-        timer.cancel()
-        return "审阅通过"
-
-
-def _wait_for_human_review_posix(timeout: int) -> str:
-    """Linux/macOS implementation using signal.SIGALRM."""
-    import signal
-
-    def _timeout_handler(signum: int, frame: Any) -> None:
-        raise TimeoutError("Human review timed out")
-
-    signal.signal(signal.SIGALRM, _timeout_handler)
-    signal.alarm(timeout)
-    try:
-        return input()
-    except TimeoutError:
-        logger.info("Human review timed out, auto-resuming")
-        return "审阅超时自动继续（未编辑）"
-    except EOFError:
-        return "审阅通过"
-    finally:
-        signal.alarm(0)
-
-
 def _stream_and_print(
     agent,
     stream_input: Any,
@@ -201,7 +155,7 @@ class Brief:
     1. Indexer scans project files and generates captions/summaries → index.md
     2. ReAct Agent reads index.md and assembles the report body
     3. Post-processing handles figure embedding, paragraph wrapping, template rendering
-    4. PDF conversion
+    4. Required PDF and LaTeX export with success validation
     """
 
     def __init__(
@@ -217,6 +171,7 @@ class Brief:
         interrupt_before: Optional[list[str]] = None,
         interrupt_after: Optional[list[str]] = None,
         debug: bool = False,
+        review_gate: ReviewGate | None = None,
     ):
         self.chat_model = chat_model
         self.mmchat_model = mmchat_model
@@ -228,6 +183,7 @@ class Brief:
         self.interrupt_before = interrupt_before
         self.interrupt_after = interrupt_after
         self.debug = debug
+        self.review_gate = review_gate or ReviewGate()
 
     def Run(
         self,
@@ -239,6 +195,7 @@ class Brief:
         report_template: str,
         output_dir: str,
         project_id: str,
+        template_spec: TemplateSpec | None = None,
     ) -> tuple[str, dict[str, Any]]:
         """Run the report generation pipeline.
 
@@ -255,6 +212,8 @@ class Brief:
             Tuple of (report_md, report_dict).
         """
         # Resolve output path
+        template_spec = template_spec or infer_template_spec(report_template)
+        report_template = str(template_spec.path)
         output_path = str(Path(project_path) / output_dir / "report.md")
         outline_path = str(Path(project_path) / output_dir / "report.md.outline")
         title_path = str(Path(project_path) / output_dir / "report.md.title")
@@ -269,7 +228,11 @@ class Brief:
         # parent so a wheel can safely operate on projects outside the package.
         project_root = Path(project_path).expanduser().resolve()
         repo_root = project_root.parent
-        report_guide_source = Path(__file__).resolve().parent / "prompts" / "report.md"
+        report_guide_source = (
+            Path(__file__).resolve().parent / "prompts" / template_spec.guide_name
+        )
+        if not report_guide_source.is_file():
+            raise FileNotFoundError(f"Report guide not found: {report_guide_source}")
         report_guide_path = project_root / ".bia-brief" / "report.md"
         report_guide_path.parent.mkdir(parents=True, exist_ok=True)
         report_guide_path.write_text(report_guide_source.read_text(encoding="utf-8"), encoding="utf-8")
@@ -281,6 +244,7 @@ class Brief:
             checkpointer=checkpointer,
             store=self.store,
             debug=self.debug,
+            agent_prompt_name=template_spec.agent_prompt_name,
         )
 
         # Build user message (agent will extract params and call run_indexer)
@@ -298,6 +262,9 @@ class Brief:
             f"Title path: {virtual_title_path}\n"
             f"Project path: {virtual_project_path}\n"
             f"Report guide path: {report_guide_virtual_path}\n"
+            f"Template: {template_spec.key} ({template_spec.display_name})\n"
+            f"Template profile: {template_spec.body_profile}\n"
+            f"Dynamic figure numbering starts at: {template_spec.dynamic_figure_start}\n"
         )
 
         config = {"configurable": {"thread_id": f"brief-{uuid.uuid4().hex[:8]}"}}
@@ -319,10 +286,12 @@ class Brief:
             if not state.interrupts:
                 break
 
+            feedback_parts: list[str] = []
             for iv in state.interrupts:
                 data = iv.value
                 msg = data.get("message", "审阅完成，请继续。")
-                user_feedback = _wait_for_human_review(msg, timeout=300)
+                feedback_parts.append(self.review_gate.review(msg))
+            user_feedback = "\n".join(part for part in feedback_parts if part)
 
             logger.info("Step C: Resuming agent with feedback...")
             _stream_and_print(
@@ -361,7 +330,11 @@ class Brief:
             if not report_title:
                 report_title = project_id
 
-        template_fields_dict = build_template_fields({"body_md": report_md}, report_title=report_title)
+        template_fields_dict = build_template_fields(
+            {"body_md": report_md},
+            report_title=report_title,
+            project_id=project_id,
+        )
 
         # Load project-specific table content (4 tables from <project_path>/table/)
         template_fields_dict.update(load_table_files(project_path))
@@ -387,25 +360,13 @@ class Brief:
             template_fields=template_fields_dict,
         )
 
-        # Step 6: PDF conversion
-        logger.info("Step 6: Converting to PDF...")
-        pdf_path = str(report_output_path.with_suffix(".pdf"))
-        try:
-            build_pdf_from_markdown(report_output_path, Path(pdf_path))
-            logger.info("PDF generated: %s", pdf_path)
-        except Exception:
-            logger.exception("PDF conversion failed")
-            pdf_path = ""
-
-        # Step 7: LaTeX export
-        logger.info("Step 7: Converting to LaTeX...")
-        tex_path = str(report_output_path.with_suffix(".tex"))
-        try:
-            build_latex_from_markdown(report_output_path, Path(tex_path))
-            logger.info("LaTeX generated: %s", tex_path)
-        except Exception:
-            logger.exception("LaTeX conversion failed")
-            tex_path = ""
+        # Step 6: Required PDF and LaTeX exports
+        logger.info("Step 6: Exporting required PDF and LaTeX artifacts...")
+        exports = _write_report_exports(report_output_path)
+        pdf_path = str(exports.pdf_path)
+        tex_path = str(exports.tex_path)
+        logger.info("PDF generated: %s", pdf_path)
+        logger.info("LaTeX generated: %s", tex_path)
 
         # Update report_dict
         report_dict["report_output_path"] = str(report_output_path)
@@ -413,6 +374,7 @@ class Brief:
         report_dict["report_tex_path"] = tex_path
         report_dict["report_md"] = report_md
         report_dict["report_title"] = report_title
+        report_dict["template_profile"] = template_spec.body_profile
 
         logger.info("Report generation complete: %s", report_output_path)
         return report_md, report_dict

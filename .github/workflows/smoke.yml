@@ -8,11 +8,26 @@ on:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      BIA_BRIEF_SKILL_DIR: ${{ github.workspace }}/skill-branch
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout Skill contract branch
+        uses: actions/checkout@v4
+        with:
+          repository: BrainStOrmics/BIA-Brief
+          ref: codex/bia-brief-skill
+          path: skill-branch
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -26,13 +41,7 @@ jobs:
 
       - name: Compile core modules and entry scripts
         run: |
-          python -m py_compile \
-            scripts/doctor.py \
-            scripts/run_project.py \
-            scripts/run_batch.py \
-            src/Brief/pipeline/agent_runtime.py \
-            src/Brief/pipeline/project_info_background.py \
-            src/Brief/pipeline/runner_config.py
+          python -m compileall -q scripts src
 
       - name: Check CLI help
         run: |
@@ -40,61 +49,11 @@ jobs:
           python scripts/run_project.py --help
           python scripts/run_batch.py --help
 
-      - name: Run runtime unit tests
+      - name: Run full test suite
         run: |
-          python -m pytest -q tests/test_deepagents_runtime.py
+          python -m pytest -q tests
 
-      - name: Check deterministic project background assembly
+      - name: Build and verify wheel
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          from tempfile import TemporaryDirectory
-          from Brief.pipeline.project_info_background import build_project_background
-
-          with TemporaryDirectory() as tmp:
-              project = Path(tmp)
-              (project / "project_info.md").write_text(
-                  "\n".join([
-                      "项目名称：Example single-cell project",
-                      "报告名称：Example report",
-                      "物种：Mus musculus",
-                      "样本数量：12",
-                      "测序技术：scRNA-seq",
-                      "项目简介：测试标准化背景生成。",
-                      "样本ID：",
-                      "SAMPLE001",
-                  ]),
-                  encoding="utf-8",
-              )
-              background = build_project_background(project, "example")
-              assert "Example single-cell project" in background
-              assert "scRNA-seq" in background
-              assert "测试标准化背景生成" in background
-              assert "SAMPLE001" in background
-          PY
-
-      - name: Check repository structure
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          required = [
-              "README.md",
-              "README.zh-CN.md",
-              "pyproject.toml",
-              "run_config.yaml",
-              "requirements.txt",
-              "project_template/project_info.md",
-              "templates/scRNA/report.md",
-              "templates/spatial/report.md",
-              "templates/standard/report.md",
-              "src/Brief/core.py",
-              "src/Brief/config/config.yaml.example",
-              "scripts/doctor.py",
-              "scripts/run_project.py",
-              "scripts/run_batch.py",
-          ]
-          missing = [path for path in required if not Path(path).exists()]
-          if missing:
-              raise SystemExit("Missing required files: " + ", ".join(missing))
-          PY
+          python -m build --wheel
+          python scripts/verify_wheel_contents.py

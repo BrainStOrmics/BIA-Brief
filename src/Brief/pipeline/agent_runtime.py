@@ -86,6 +86,7 @@ def build_report_agent(
     checkpointer: Any | None = None,
     store: Any | None = None,
     debug: bool = False,
+    agent_prompt_name: str = "agent.md",
 ):
     """Build the report agent and its Indexer sub-agent."""
     root = Path(repo_root).expanduser().resolve()
@@ -111,7 +112,7 @@ def build_report_agent(
     return create_deep_agent(
         model=chat_model,
         tools=[create_outline_review_tool()],
-        system_prompt=load_agent_prompt(),
+        system_prompt=load_agent_prompt(agent_prompt_name),
         subagents=[indexer_subagent],
         backend=backend,
         checkpointer=checkpointer or MemorySaver(),

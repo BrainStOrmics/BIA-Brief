@@ -16,6 +16,7 @@ _FIELD_ORDER = [
     "测序技术",
     "项目简介",
 ]
+_KNOWN_FIELDS = set(_FIELD_ORDER) | {"样本ID", "补充说明"}
 
 
 def _clean_line(line: str) -> str:
@@ -23,8 +24,8 @@ def _clean_line(line: str) -> str:
     return line.strip().lstrip("/").lstrip("#").strip()
 
 
-def _split_field_value(value: str) -> list[str]:
-    """Split a field that may contain multiple inline values."""
+def _split_sample_ids(value: str) -> list[str]:
+    """Split an inline sample-id field without splitting free text."""
     parts = [part.strip() for part in re.split(r"[，,;；]\s*|\s{2,}", value) if part.strip()]
     return parts or [value.strip()]
 
@@ -35,31 +36,38 @@ def parse_project_info(text: str) -> dict[str, list[str]]:
     fields["样本ID"] = []
     fields["补充说明"] = []
 
-    in_sample_ids = False
+    current_field: str | None = None
     for raw_line in text.splitlines():
         line = _clean_line(raw_line)
         if not line:
             continue
 
-        match = re.match(r"^(项目名称|报告名称|合同编号|物种|参考基因组|样本数量|测序技术|项目简介|样本ID)\s*[:：]\s*(.*)$", line)
+        match = re.match(
+            r"^(项目名称|报告名称|合同编号|物种|参考基因组|样本数量|测序技术|项目简介|"
+            r"样本ID|补充说明)"
+            r"\s*[:：]\s*(.*)$",
+            line,
+        )
         if match:
             key, value = match.groups()
             value = value.strip()
+            current_field = key
             if key == "样本ID":
-                in_sample_ids = True
                 if value:
-                    fields["样本ID"].extend(_split_field_value(value))
+                    fields["样本ID"].extend(_split_sample_ids(value))
             else:
-                fields[key] = _split_field_value(value) if value else []
-                in_sample_ids = False
+                fields[key] = [value] if value else []
             continue
 
-        if in_sample_ids:
-            fields["样本ID"].append(line)
+        if raw_line.lstrip().startswith("#"):
             continue
-
-        if re.fullmatch(r"[A-Z]{2,5}\d{6,}", line):
-            fields["样本ID"].append(line)
+        if current_field == "样本ID":
+            fields["样本ID"].extend(_split_sample_ids(line))
+        elif current_field in _KNOWN_FIELDS and current_field != "样本ID":
+            if fields[current_field]:
+                fields[current_field][0] += "\n" + line
+            else:
+                fields[current_field] = [line]
         else:
             fields["补充说明"].append(line)
 
@@ -69,6 +77,11 @@ def parse_project_info(text: str) -> dict[str, list[str]]:
 def _first_value(fields: dict[str, list[str]], key: str) -> str:
     values = fields.get(key, [])
     return values[0].strip() if values else ""
+
+
+def _sentence_fragment(value: str) -> str:
+    """Remove terminal punctuation before wrapping the value in a sentence."""
+    return value.strip().rstrip("。.!！?？；; ")
 
 
 def parse_report_title(text: str) -> str:
@@ -95,13 +108,27 @@ def read_report_title(project_path: str | Path) -> str:
     return parse_report_title(text)
 
 
-def build_project_background(project_path: str | Path, project_id: str | None = None) -> str:
+def build_project_background(
+    project_path: str | Path,
+    project_id: str | None = None,
+    *,
+    analysis_profile: str = "single_cell",
+) -> str:
     """Build a standardized factual background from project_info.md."""
     project_root = Path(project_path)
+    scope_text = {
+        "single_cell": "单细胞转录组数据",
+        "spatial": "空间转录组数据",
+        "generic": "项目数据",
+    }.get(analysis_profile, "项目数据")
+
     info_path = project_root / "project_info.md"
     if not info_path.is_file():
         fallback_name = project_id or project_root.name
-        return f"项目 {fallback_name} 的背景信息缺失，请结合项目文件、图像和脚本完成单细胞报告生成。"
+        return (
+            f"项目 {fallback_name} 的背景信息缺失，请结合项目文件、图像和脚本"
+            f"完成{scope_text}报告生成。"
+        )
 
     text = info_path.read_text(encoding="utf-8", errors="replace")
     fields = parse_project_info(text)
@@ -113,8 +140,9 @@ def build_project_background(project_path: str | Path, project_id: str | None = 
     genome = _first_value(fields, "参考基因组")
     sample_count = _first_value(fields, "样本数量")
     sequencing_tech = _first_value(fields, "测序技术")
-    project_intro = _first_value(fields, "项目简介")
+    project_intro = _first_value(fields, "项目简介").replace("\n", " ")
     sample_ids = fields.get("样本ID", [])
+    notes = [item.replace("\n", " ") for item in fields.get("补充说明", []) if item.strip()]
 
     parts: list[str] = [f"项目名称为{project_name}。"]
     if report_name:
@@ -138,7 +166,7 @@ def build_project_background(project_path: str | Path, project_id: str | None = 
         parts.append(f"样本编号包括{'、'.join(sample_ids)}。")
 
     if project_intro:
-        parts.append(f"项目说明：{project_intro}。")
+        parts.append(f"项目说明：{_sentence_fragment(project_intro)}。")
     else:
         # Auto-generate a concise background from available metadata
         hints = []
@@ -149,13 +177,27 @@ def build_project_background(project_path: str | Path, project_id: str | None = 
         if sequencing_tech:
             hints.append(f"采用{sequencing_tech}技术")
         if hints:
-            parts.append(f"本项目{'，'.join(hints)}进行单细胞转录组测序分析。")
+            parts.append(f"本项目{'，'.join(hints)}开展{scope_text}分析。")
         else:
-            parts.append("本项目进行单细胞转录组测序分析。")
+            parts.append(f"本项目开展{scope_text}分析。")
 
-    parts.append(
-        "后续分析将围绕单细胞转录组数据的细胞异质性、细胞亚群鉴定、特征基因表达谱和相关生物学机制展开，"
-        "并结合项目图像和脚本生成标准化报告。"
-    )
+    if notes:
+        parts.append(f"补充说明：{_sentence_fragment(' '.join(notes))}。")
+
+    if analysis_profile == "single_cell":
+        parts.append(
+            "后续分析将围绕单细胞转录组数据的细胞异质性、细胞亚群鉴定、"
+            "特征基因表达谱和相关生物学机制展开，并结合项目图像和脚本生成标准化报告。"
+        )
+    elif analysis_profile == "spatial":
+        parts.append(
+            "后续分析将围绕空间组织结构、区域表达模式、细胞邻域关系和空间异质性展开，"
+            "并结合项目图像和脚本生成标准化报告。"
+        )
+    else:
+        parts.append(
+            "后续报告将围绕数据质量、主要分析结果、关键发现和项目结论展开，"
+            "并结合项目图像和脚本生成标准化报告。"
+        )
 
     return "".join(parts)

@@ -18,9 +18,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "default_template": "scRNA",
         "default_lang": "zh-CN",
         "auto_approve": True,
+        "review_timeout": 300,
         "project_input_dirs": ["figures", "pics"],
         "templates": {
             "scRNA": "templates/scRNA/report.md",
+            "dnbc4": "templates/standard/report.md",
             "spatial": "templates/spatial/report.md",
             "standard": "templates/standard/report.md",
         },

@@ -7,12 +7,22 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $dist = Join-Path $repo "dist"
+$build = Join-Path $repo "build"
 
 if (-not (Test-Path $ConfigPath)) {
     throw "A model config is required. Pass -ConfigPath or set BIA_BRIEF_CONFIG."
 }
 
+if (Test-Path -LiteralPath $build) {
+    $resolvedBuild = (Resolve-Path -LiteralPath $build).Path
+    if (-not $resolvedBuild.StartsWith($repo, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to remove a build directory outside the repository: $resolvedBuild"
+    }
+    Remove-Item -LiteralPath $resolvedBuild -Recurse -Force
+}
+
 python -m build --wheel --outdir $dist
+python (Join-Path $repo "scripts\verify_wheel_contents.py")
 $wheel = Get-ChildItem $dist -Filter "bia_brief-*.whl" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $wheel) { throw "Wheel was not created in $dist" }
 

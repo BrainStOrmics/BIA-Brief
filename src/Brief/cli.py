@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import shutil
 import sys
@@ -13,8 +12,29 @@ from pathlib import Path
 from typing import Any
 
 from .pipeline.project_info_background import build_project_background
+from .pipeline.review_gate import ReviewGate
 from .pipeline.runner_config import DEFAULT_CONFIG, load_runner_config
+from .pipeline.template_spec import TemplateSpec, resolve_template_spec
 from .config.setup import interactive_setup, resolve_model_config_path
+
+
+class _Tee:
+    """Write to the live console and the batch log at the same time."""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, text: str) -> int:
+        for stream in self.streams:
+            stream.write(text)
+        return len(text)
+
+    def flush(self) -> None:
+        for stream in self.streams:
+            stream.flush()
+
+    def isatty(self) -> bool:
+        return any(getattr(stream, "isatty", lambda: False)() for stream in self.streams)
 
 
 def _package_root() -> Path:
@@ -29,19 +49,15 @@ def _resolve_project(value: str, projects_root: Path) -> Path:
 
 
 def _resolve_template(value: str, templates: dict[str, str]) -> Path:
-    configured = templates.get(value, value)
-    candidate = Path(configured).expanduser()
-    if candidate.is_absolute() and candidate.is_file():
-        return candidate.resolve()
-    if candidate.is_file():
-        return candidate.resolve()
-    repo_candidate = Path.cwd() / candidate
-    if repo_candidate.is_file():
-        return repo_candidate.resolve()
-    packaged = _package_root() / "resources" / "templates" / value / "report.md"
-    if packaged.is_file():
-        return packaged.resolve()
-    raise FileNotFoundError(f"Template not found: {value}")
+    return _resolve_template_spec(value, templates).path
+
+
+def _resolve_template_spec(value: str, templates: dict[str, str]) -> TemplateSpec:
+    return resolve_template_spec(
+        value,
+        templates,
+        package_root=_package_root(),
+    )
 
 
 def _safe_pdf_name(title: str) -> str:
@@ -116,14 +132,26 @@ def run_project_cli(argv: list[str] | None = None) -> int:
         return 1
 
     template = args.template or runtime.get("default_template", "scRNA")
-    template_path = _resolve_template(template, runtime.get("templates", DEFAULT_CONFIG["runner"]["templates"]))
+    template_spec = _resolve_template_spec(
+        template,
+        runtime.get("templates", DEFAULT_CONFIG["runner"]["templates"]),
+    )
+    if template_spec.support_level in {"legacy", "experimental"}:
+        print(
+            f"Template note: {template_spec.key} is {template_spec.support_level} "
+            f"({template_spec.display_name}).",
+            file=sys.stderr,
+        )
     project_id = args.project_id or project_path.name
-    if runtime.get("auto_approve", True) and not args.interactive_review:
-        os.environ.setdefault("BRIEF_AUTO_APPROVE", "1")
+    auto_approve = bool(runtime.get("auto_approve", True)) and not args.interactive_review
 
     try:
         llm_config = _load_models(args.config)
-        background = args.background or build_project_background(project_path, project_id)
+        background = args.background or build_project_background(
+            project_path,
+            project_id,
+            analysis_profile=template_spec.body_profile,
+        )
         if args.print_background:
             print(background)
             return 0
@@ -131,12 +159,20 @@ def run_project_cli(argv: list[str] | None = None) -> int:
         from .core import Brief
 
         started = time.time()
-        brief = Brief(chat_model=llm_config.MODELS["chat_model"], mmchat_model=llm_config.MODELS["mmchat_model"])
+        brief = Brief(
+            chat_model=llm_config.MODELS["chat_model"],
+            mmchat_model=llm_config.MODELS["mmchat_model"],
+            review_gate=ReviewGate(
+                auto_approve=auto_approve,
+                timeout=int(runtime.get("review_timeout", 300)),
+            ),
+        )
         _, report = brief.Run(
             background=background,
             output_lang=args.lang or runtime.get("default_lang", "zh-CN"),
             project_path=str(project_path),
-            report_template=str(template_path),
+            report_template=str(template_spec.path),
+            template_spec=template_spec,
             output_dir=str(runtime.get("project_output_dir", "output")),
             project_id=project_id,
         )
@@ -203,10 +239,13 @@ def run_batch_cli(argv: list[str] | None = None) -> int:
         from contextlib import redirect_stderr, redirect_stdout
         from io import StringIO
         captured = StringIO()
-        with redirect_stdout(captured), redirect_stderr(captured):
+        console_stdout = _Tee(sys.stdout, captured) if args.interactive_review else captured
+        console_stderr = _Tee(sys.stderr, captured) if args.interactive_review else captured
+        with redirect_stdout(console_stdout), redirect_stderr(console_stderr):
             code = run_project_cli(cmd)
         output = captured.getvalue()
-        print(output, end="")
+        if not args.interactive_review:
+            print(output, end="")
         log_path.write_text(output, encoding="utf-8")
         if code != 0:
             failed += 1
