@@ -16,8 +16,9 @@ Confirm all of the following before reporting success:
 - Figures referenced in the report exist and render without broken paths.
 - Every figure in the report has a caption that describes what the figure
   shows, and the caption follows the figure.
-- Figure numbering is continuous and starts at 图2 — 图1 is the static
-  workflow figure supplied by the template.
+- Dynamic figure numbering is continuous and starts at 图2. 图1 is the static
+  workflow figure supplied by the template; the later methods project-flow
+  image is labelled 附图1 and is outside the dynamic sequence.
 
 ## Visual
 

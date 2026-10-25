@@ -4,7 +4,7 @@
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `No matching distribution found` | The release is not on PyPI yet | Install from the immutable tag: `python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.4"` |
+| `No matching distribution found` | The release is not on PyPI yet | Install from the immutable tag: `python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.5"` |
 | `Model config is required. Run bia-brief-setup once, or pass --config.` | No model configuration was found | Run `bia-brief-setup`, or pass `--config <path>` / set `BIA_BRIEF_CONFIG` |
 | `Model config not found: <path>` | The given config path does not exist | Correct the path; the lookup order is `--config`, `BIA_BRIEF_CONFIG`, `~/.bia-brief/config.yaml`, then the legacy checkout config |
 | `FAIL dependency: <module>` in `bia-brief-doctor` | A Python dependency is missing | Reinstall the runtime; the checked modules are `deepagents`, `langchain_core`, `langchain_openai`, `langgraph`, `yaml`, and `pypdf` |
@@ -38,7 +38,7 @@
 | Chinese text is garbled in the PDF | No CJK font available to the renderer | Install a CJK font on the system |
 | `GBK` codec error on Windows | The console codepage cannot encode the output | Set `PYTHONIOENCODING=utf-8` or use a UTF-8 terminal |
 | The PDF has no page background or wave decoration | The packaged background asset is missing | Reinstall the runtime; `templates/assets/BGI_SY/pics/` must ship with the package |
-| Figures appear as white rectangles on a slightly darker page | The runtime is older than 0.2.2 | Upgrade to `v0.2.2` or newer, which uses a pure-white sheet |
+| Figures appear as white rectangles on a slightly darker page | The runtime is older than 0.2.2 | Upgrade to the pinned `v0.2.5` runtime, which uses a pure-white sheet |
 
 ## Workflow
 

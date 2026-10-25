@@ -11,5 +11,8 @@ Use one project directory per report:
 └── output/                generated artifacts
 ```
 
-Use `scRNA`, `spatial`, or `standard` as the template key. Pass an explicit
-template path only when the project requires a custom template.
+Use `scRNA` for the stable single-cell workflow. `dnbc4` and `standard` select
+the DNBelab C4 single-cell layout; `standard` is retained as a compatibility
+alias. The `spatial` body profile is experimental and requires manual review.
+Pass an explicit template path only when the project requires a custom
+template; custom paths use the generic body profile.

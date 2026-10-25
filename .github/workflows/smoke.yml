@@ -1,0 +1,63 @@
+name: Skill Contract Smoke
+
+on:
+  push:
+    branches: [codex/bia-brief-skill]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile install checker
+        run: python -m compileall -q scripts
+
+      - name: Verify Skill files and pinned version
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          required = [
+              "SKILL.md",
+              "README.md",
+              "README.zh-CN.md",
+              "agents/openai.yaml",
+              "assets/config.yaml.example",
+              "references/project-structure.md",
+              "references/quality-checklist.md",
+              "references/troubleshooting.md",
+              "scripts/check_bia_brief.py",
+          ]
+          missing = [path for path in required if not Path(path).is_file()]
+          if missing:
+              raise SystemExit("Missing Skill files: " + ", ".join(missing))
+
+          checker = Path("scripts/check_bia_brief.py").read_text(encoding="utf-8")
+          match = re.search(r'EXPECTED_VERSION\s*=\s*"([^"]+)"', checker)
+          if not match:
+              raise SystemExit("check_bia_brief.py has no EXPECTED_VERSION")
+          version = match.group(1)
+
+          for name in (
+              "SKILL.md",
+              "README.md",
+              "README.zh-CN.md",
+              "references/troubleshooting.md",
+          ):
+              text = Path(name).read_text(encoding="utf-8")
+              if version not in text:
+                  raise SystemExit(f"{name} does not pin {version}")
+
+          skill = Path("SKILL.md").read_text(encoding="utf-8")
+          if not skill.startswith("---\nname: bia-brief-report\n"):
+              raise SystemExit("SKILL.md frontmatter is invalid")
+          PY

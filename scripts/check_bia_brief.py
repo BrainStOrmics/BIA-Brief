@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import importlib.resources
+import importlib.metadata
+import shutil
 import sys
-from pathlib import Path
+
+
+EXPECTED_VERSION = "0.2.5"
 
 
 def main() -> int:
@@ -14,26 +18,30 @@ def main() -> int:
         print(f"bia-brief is not installed: {exc}", file=sys.stderr)
         return 1
 
-    environment_root = Path(sys.executable).resolve().parent
-    scripts_dir = environment_root / "Scripts" if sys.platform == "win32" else environment_root
-    command = next(
-        (
-            candidate
-            for candidate in (
-                scripts_dir / "bia-brief-project.exe",
-                scripts_dir / "bia-brief-project",
-            )
-            if candidate.is_file()
-        ),
-        None,
-    )
-    template = importlib.resources.files("Brief.resources").joinpath(
-        "templates/scRNA/report.md"
-    )
-    if not command or not template.is_file():
+    try:
+        installed_version = importlib.metadata.version("bia-brief")
+    except importlib.metadata.PackageNotFoundError:
+        print("bia-brief package metadata is missing", file=sys.stderr)
+        return 1
+    if installed_version != EXPECTED_VERSION:
+        print(
+            f"bia-brief version mismatch: expected {EXPECTED_VERSION}, "
+            f"found {installed_version}",
+            file=sys.stderr,
+        )
+        return 1
+
+    command = shutil.which("bia-brief-project")
+    resource_root = importlib.resources.files("Brief.resources")
+    templates = [
+        resource_root.joinpath("templates/scRNA/report.md"),
+        resource_root.joinpath("templates/spatial/report.md"),
+        resource_root.joinpath("templates/standard/report.md"),
+    ]
+    if not command or not all(template.is_file() for template in templates):
         print("bia-brief installation is incomplete", file=sys.stderr)
         return 1
-    print("bia-brief is ready")
+    print(f"bia-brief {installed_version} is ready")
     return 0
 
 
