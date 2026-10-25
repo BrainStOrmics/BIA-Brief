@@ -8,7 +8,7 @@ import shutil
 import sys
 
 
-EXPECTED_VERSION = "0.2.5"
+EXPECTED_VERSION = "0.2.6"
 
 
 def main() -> int:

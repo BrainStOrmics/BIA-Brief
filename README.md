@@ -5,7 +5,7 @@ agent how to turn a bioinformatics project — a folder of analysis figures,
 scripts, and metadata — into a finished report in Markdown, PDF, and LaTeX.
 
 The Skill contains workflow instructions only. The report engine is the
-`bia-brief` Python package, installed separately as the pinned 0.2.5 release.
+`bia-brief` Python package, installed separately as the pinned 0.2.6 release.
 
 There are two ways to use it:
 
@@ -35,17 +35,17 @@ it into your agent's skills directory. Then install the pinned runtime in the
 environment that will generate reports:
 
 ```powershell
-python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.5"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.6"
 playwright install chromium
 ```
 
 The runtime is not published to PyPI yet, so the immutable Git tag is the
-install source. `pip install "bia-brief==0.2.5"` currently fails with
+install source. `pip install "bia-brief==0.2.6"` currently fails with
 `No matching distribution found`. Once a release reaches PyPI, the shorter
 form becomes available:
 
 ```powershell
-python -m pip install "bia-brief==0.2.5"
+python -m pip install "bia-brief==0.2.6"
 ```
 
 ## Configure your models once
@@ -162,7 +162,7 @@ and table of contents are present. The detailed acceptance checks are in
 |---|---|
 | PDF export fails | Playwright Chromium not installed (`playwright install chromium`) |
 | Doctor reports a missing project | Project lacks a `figures/` or `pics/` directory |
-| `pip install "bia-brief==0.2.5"` fails | The release is not on PyPI yet, so use the Git tag command above |
+| `pip install "bia-brief==0.2.6"` fails | The release is not on PyPI yet, so use the Git tag command above |
 | Template not found | Wrong key or path — use `templates/scRNA/report.md`, `templates/spatial/report.md`, or `templates/standard/report.md` |
 | Chinese text garbled in the PDF | Missing Chinese font — ensure the `ctex` LaTeX package or a system CJK font is available |
 | Indexer returns nothing | Vision model unavailable — check the API key and base URL in `config.yaml` |
@@ -180,7 +180,7 @@ More cases are in [references/troubleshooting.md](references/troubleshooting.md)
 | `--interactive-review` | Pause for the indexer and outline reviews instead of auto-approving |
 | `--no-delivery-copy` | Do not copy the PDF into `deliverables/` |
 | `--config <path>` | Use a specific model configuration for this run |
-| `--project-id <id>` | Project id to record in the report |
+| `--project-id <id>` | Override the project id used for fallback title and metadata; it is not printed on the cover |
 | `--runner-config <path>` | Use a specific runner configuration |
 | `--lang <code>` | Report language, default `zh-CN` |
 
@@ -230,11 +230,11 @@ Windows. On POSIX systems, use the shell's equivalent activation and path
 syntax; the Python package supports both Windows and POSIX approval timers.
 
 The maintained Skill branch is `codex/bia-brief-skill`. The runtime release is
-available from the immutable `v0.2.5` Git tag:
+available from the immutable `v0.2.6` Git tag:
 
 ```text
 https://github.com/BrainStOrmics/BIA-Brief/tree/codex/bia-brief-skill
-https://github.com/BrainStOrmics/BIA-Brief/tree/v0.2.5
+https://github.com/BrainStOrmics/BIA-Brief/tree/v0.2.6
 ```
 
 `v0.2.2` is the first release whose report pages use a pure-white sheet, so
