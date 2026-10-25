@@ -333,7 +333,6 @@ class Brief:
         template_fields_dict = build_template_fields(
             {"body_md": report_md},
             report_title=report_title,
-            project_id=project_id,
         )
 
         # Load project-specific table content (4 tables from <project_path>/table/)

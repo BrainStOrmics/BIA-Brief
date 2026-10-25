@@ -12,7 +12,6 @@ PACKAGED_ROOT = REPO_ROOT / "src" / "Brief" / "resources" / "templates"
 FAMILIES = ("scRNA", "spatial", "standard")
 
 REQUIRED_PLACEHOLDERS = {
-    "{{Project_ID}}",
     "{{Cover_Report_Title}}",
     "{{Cover_Report_Date}}",
     "{{Cover_Image_Path}}",
@@ -59,6 +58,13 @@ def test_template_has_only_one_primary_figure_one_caption(family: str) -> None:
 
     assert text.count("<p align='center'>图1 ") == 1
     assert "附图1 项目流程图" in text
+
+
+@pytest.mark.parametrize("family", FAMILIES)
+def test_cover_does_not_render_a_project_id(family: str) -> None:
+    text = (TEMPLATE_ROOT / family / "report.md").read_text(encoding="utf-8")
+
+    assert "{{Project_ID}}" not in text
 
 
 @pytest.mark.parametrize("family", FAMILIES)

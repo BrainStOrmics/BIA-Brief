@@ -32,10 +32,8 @@ def _relative_path_from_report(path_text: str, report_output_dir: Path) -> str:
 def _build_template_context(
     cover_image_md_path: str,
     template_fields: dict[str, Any] | None = None,
-    project_id: str = "",
 ) -> dict[str, str]:
     context = {
-        "Project_ID": project_id,
         "Cover_Report_Date": datetime.now().strftime("%Y-%m-%d"),
         "Cover_Image_Path": cover_image_md_path,
         "Cover_Report_Title": "",
@@ -99,7 +97,6 @@ def render_report_markdown(
     template_context = _build_template_context(
         cover_image_md_path=cover_image_md_path,
         template_fields=template_fields,
-        project_id=project_id,
     )
 
     placeholders = set(re.findall(r"{{\s*([^{}]+?)\s*}}", report_template_text))

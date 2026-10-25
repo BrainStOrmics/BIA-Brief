@@ -1,5 +1,4 @@
 <div class='cover-wrapper'>
-<h2 style="font-size: 15pt;">{{Project_ID}}</h2>
 <div style='text-align: center;'>
 
 <h2>{{Cover_Report_Title}}</h2>

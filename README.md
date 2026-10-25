@@ -83,7 +83,7 @@ Install the package in the active environment. The package is not on PyPI yet,
 so use the immutable release tag:
 
 ```powershell
-python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.5"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.6"
 playwright install chromium
 bia-brief-setup
 ```
@@ -91,7 +91,7 @@ bia-brief-setup
 After the release is published to PyPI, the shorter command will be:
 
 ```powershell
-python -m pip install "bia-brief==0.2.5"
+python -m pip install "bia-brief==0.2.6"
 ```
 
 The setup wizard stores chat and vision model settings in
@@ -249,7 +249,7 @@ python scripts/run_batch.py project_a project_b
 | `--no-delivery-copy` | Skip copying PDF to `deliverables/` |
 | `--runner-config run_config.yaml` | Custom runner config path |
 | `--config model.yaml` | Model config to use instead of the saved one |
-| `--project-id my_id` | Project id to record in the report |
+| `--project-id my_id` | Override the project id used for fallback title and metadata; it is not printed on the cover |
 | `--stop-on-failure` | (Batch) abort on first error |
 
 ---

@@ -82,7 +82,7 @@ flowchart LR
 当前包尚未发布到 PyPI，请使用不可变的 Git tag 安装：
 
 ```powershell
-python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.5"
+python -m pip install "bia-brief @ git+https://github.com/BrainStOrmics/BIA-Brief.git@v0.2.6"
 playwright install chromium
 bia-brief-setup
 ```
@@ -90,7 +90,7 @@ bia-brief-setup
 发布到 PyPI 后可使用：
 
 ```powershell
-python -m pip install "bia-brief==0.2.5"
+python -m pip install "bia-brief==0.2.6"
 ```
 
 首次运行 `bia-brief-setup` 时配置文本模型和视觉模型。向导把配置保存到
@@ -244,7 +244,7 @@ python scripts/run_batch.py project_a project_b
 | `--no-delivery-copy`       | 不复制 PDF 到`deliverables/`                                     |
 | `--runner-config run_config.yaml` | 指定运行配置路径                                                   |
 | `--config model.yaml`      | 指定模型配置文件，不使用已保存的那份                               |
-| `--project-id my_id`        | 指定报告中记录的项目 id                                           |
+| `--project-id my_id`        | 覆盖回退标题和元数据使用的项目 id，不显示在封面                   |
 | `--stop-on-failure`        | （批量）首次失败即停止                                             |
 
 ---

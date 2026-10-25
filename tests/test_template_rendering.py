@@ -32,16 +32,14 @@ def _render(tmp_path: Path, template_text: str) -> str:
     return report
 
 
-def test_project_id_is_rendered(tmp_path: Path) -> None:
-    report = _render(tmp_path, "{{Project_ID}}\n\n{{Body_Content}}")
-
-    assert "PROJECT-42" in report
-    assert "{{Project_ID}}" not in report
-
-
 def test_unknown_placeholder_fails_instead_of_rendering_empty(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="unfilled"):
         _render(tmp_path, "{{Body_Content}}\n{{Unknown_Field}}")
+
+
+def test_project_id_is_not_exposed_to_templates(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="Project_ID"):
+        _render(tmp_path, "{{Project_ID}}\n{{Body_Content}}")
 
 
 @pytest.mark.parametrize("family", ["scRNA", "spatial", "standard"])
@@ -55,7 +53,6 @@ def test_builtin_templates_render_all_required_fields(
     fields = build_template_fields(
         {"body_md": "body"},
         report_title="Title",
-        project_id="PROJECT-42",
     )
     fields.update(
         {
@@ -81,6 +78,6 @@ def test_builtin_templates_render_all_required_fields(
         output_path=str(project / "output" / "report.md"),
     )
 
-    assert "PROJECT-42" in report
+    assert "PROJECT-42" not in report
     assert "body" in report
     assert not re.findall(r"{{\s*[^{}]+\s*}}", report)
