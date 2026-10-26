@@ -1,10 +1,10 @@
 # BIA-Brief
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 **Automated bioinformatics report generation from analysis outputs.** BIA-Brief transforms project figures, scripts, and metadata into structured, publication-ready reports in Markdown, PDF, and LaTeX — with minimal manual effort.
 
 Optimized for single-cell / single-nucleus transcriptomics (scRNA-seq, snRNA-seq), with pluggable template support for spatial transcriptomics, custom pipelines, and more.
-
-[中文版](README.zh-CN.md)
 
 ---
 
@@ -116,7 +116,7 @@ python -m pip install dist\bia_brief-*.whl
 ```
 
 
-### 1. Setup :wrench:
+### 1. Setup
 
 ```bash
 # Clone and install from source
@@ -127,7 +127,7 @@ playwright install chromium
 bia-brief-setup
 ```
 
-### 2. Prepare a project :open_file_folder:
+### 2. Prepare a Project
 
 ```bash
 # Create from skeleton
@@ -141,13 +141,13 @@ Copy-Item -Recurse project_template projects/my_project
 #   └── project_info.md  # project metadata (optional)
 ```
 
-### 3. Run health check :stethoscope:
+### 3. Run Health Check
 
 ```powershell
 python scripts/doctor.py --project my_project
 ```
 
-### 4. Generate report :rocket:
+### 4. Generate a Report
 
 ```powershell
 # Preview the background sent to the model (requires a model config)
@@ -157,7 +157,7 @@ python scripts/run_project.py my_project --print-background
 python scripts/run_project.py my_project
 ```
 
-### 5. Output :tada:
+### 5. Output
 
 ```
 projects/my_project/
@@ -192,7 +192,7 @@ projects/<project_id>/
 └── project_info.md     # optional — project metadata
 ```
 
-### `project_info.md` :memo:
+### `project_info.md`
 
 This file drives the background context passed to the report agent. Fields filled in by the user are used directly. Empty fields are skipped. Free-text fields such as `项目简介` preserve commas and continuation lines; `项目简介` is the main place to provide the biological question, tissue/cell context, and project-specific interpretation target.
 
@@ -223,21 +223,21 @@ python scripts/run_project.py my_project --print-background
 
 ## Runner commands
 
-### Single project :arrow_forward:
+### Single Project
 
 ```powershell
 python scripts/run_project.py <project_id>
 python scripts/run_project.py D:/path/to/project --template templates/spatial/report.md
 ```
 
-### Batch mode :arrows_counterclockwise:
+### Batch Mode
 
 ```powershell
 python scripts/run_batch.py --all
 python scripts/run_batch.py project_a project_b
 ```
 
-### Key flags :flags:
+### Key Flags
 
 | Flag | Effect |
 |---|---|
@@ -254,7 +254,7 @@ python scripts/run_batch.py project_a project_b
 
 ---
 
-## Templates :art:
+## Templates
 
 Template families are grouped under `templates/`:
 
@@ -281,7 +281,7 @@ paths use the generic profile.
 
 ---
 
-## Configuration: two-layer system :gear:
+## Configuration: Two-Layer System
 
 | Layer | File | Purpose |
 |---|---|---|
@@ -295,7 +295,7 @@ with sensible defaults and is overridden with `--runner-config`.
 
 ---
 
-## Typical workflow :dart:
+## Typical Workflow
 
 1. :open_file_folder: Place analysis figures in `projects/<project_id>/pics/`
 2. :pencil: (Optional) Fill in `project_info.md` — at minimum the species, sample count, and project name
@@ -309,7 +309,7 @@ with sensible defaults and is overridden with `--runner-config`.
 
 ---
 
-## Notes :bookmark:
+## Notes
 
 - The core runtime is packaged as `bia-brief`. A separate `bia-brief-report` Skill can call the installed CLI without copying runtime source code.
 - `logs/` and `deliverables/` are gitignored; `deliverables/` is auto-created at runtime.
@@ -318,7 +318,7 @@ with sensible defaults and is overridden with `--runner-config`.
 
 ---
 
-## Troubleshooting :warning:
+## Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
@@ -335,7 +335,7 @@ with sensible defaults and is overridden with `--runner-config`.
 
 See [LICENSE](LICENSE).
 
-## Agent runtime
+## Agent Runtime
 
 The report workflow uses DeepAgents 0.6.x as the orchestration layer. It keeps
 LangChain model adapters and LangGraph checkpointing underneath, uses built-in

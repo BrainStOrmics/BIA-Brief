@@ -1,10 +1,10 @@
 # BIA-Brief
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 **自动化生物信息学报告生成工具。** BIA-Brief 将项目图片、脚本和元数据转化为结构化、可发表的 Markdown、PDF 和 LaTeX 报告，只需极少量人工介入。
 
 以单细胞 / 单细胞核转录组（scRNA-seq, snRNA-seq）为主，同时为 DNBelab C4、实验性空间转录组和自定义模板提供显式正文 profile。
-
-English version: [README.md](README.md)
 
 ---
 
@@ -112,7 +112,7 @@ python -m build --wheel
 python -m pip install dist\bia_brief-*.whl
 ```
 
-### 1. 环境准备 🔧
+### 1. 环境准备
 
 ```bash
 # 克隆并从源码安装
@@ -123,7 +123,7 @@ playwright install chromium
 bia-brief-setup
 ```
 
-### 2. 准备项目 📂
+### 2. 准备项目
 
 ```powershell
 # 从骨架创建
@@ -137,13 +137,13 @@ Copy-Item -Recurse project_template projects/my_project
 #   └── project_info.md   项目元数据（可选）
 ```
 
-### 3. 运行健康检查 :stethoscope:
+### 3. 运行健康检查
 
 ```powershell
 python scripts/doctor.py --project my_project
 ```
 
-### 4. 生成报告 🚀
+### 4. 生成报告
 
 ```powershell
 # 预览将要传给模型的背景文本（需要已有模型配置）
@@ -153,7 +153,7 @@ python scripts/run_project.py my_project --print-background
 python scripts/run_project.py my_project
 ```
 
-### 5. 输出文件 🎉
+### 5. 输出文件
 
 ```
 projects/my_project/
@@ -188,7 +188,7 @@ projects/<project_id>/
 └── project_info.md     可选 — 项目元数据
 ```
 
-### `project_info.md` 📝
+### `project_info.md`
 
 该文件是报告 Agent 获取项目背景的主要来源。用户填写的字段会被直接使用；空字段会被跳过，不会由 LLM 自动补全。`项目简介` 等自由文本会保留逗号、分号和续行，是补充生物学问题、组织/细胞背景和项目特异解读目标的主要位置。
 
@@ -218,21 +218,21 @@ python scripts/run_project.py my_project --print-background
 
 ## 运行命令
 
-### 单项目 ▶️
+### 单项目
 
 ```powershell
 python scripts/run_project.py <project_id>
 python scripts/run_project.py D:/path/to/project --template templates/spatial/report.md
 ```
 
-### 批量 🔄
+### 批量
 
 ```powershell
 python scripts/run_batch.py --all
 python scripts/run_batch.py project_a project_b
 ```
 
-### 常用参数 🎏
+### 常用参数
 
 | 参数                         | 作用                                                               |
 | ---------------------------- | ------------------------------------------------------------------ |
@@ -249,7 +249,7 @@ python scripts/run_batch.py project_a project_b
 
 ---
 
-## 模板系统 🎨
+## 模板系统
 
 模板按用途分组在 `templates/` 下：
 
@@ -274,7 +274,7 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 
 ---
 
-## 配置体系：双层结构 ⚙️
+## 配置体系：双层结构
 
 | 层级             | 文件                             | 用途                                                  |
 | ---------------- | -------------------------------- | ----------------------------------------------------- |
@@ -287,7 +287,7 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 
 ---
 
-## 典型工作流程 🎯
+## 典型工作流程
 
 1. 📂 将分析结果图放入 `projects/<project_id>/pics/`
 2. 📝 （可选）填写 `project_info.md` — 至少填写物种、样本量和项目名称
@@ -299,7 +299,7 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 
 ---
 
-## 说明 🔖
+## 说明
 
 - 核心运行时已经封装为 `bia-brief` Python 包。独立的 `bia-brief-report` Skill 只调用已安装的 CLI，不复制核心源码。
 - `logs/` 和 `deliverables/` 被 git 忽略；`deliverables/` 在运行时自动创建。
@@ -308,7 +308,7 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 
 ---
 
-## 常见问题 ⚠️
+## 常见问题
 
 | 现象                       | 可能原因                                                                                                                       |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -325,7 +325,7 @@ python scripts/run_project.py my_project --template templates/scRNA/report.md
 
 参见 [LICENSE](LICENSE)。
 
-## Agent 运行时
+## 智能体运行时
 
 报告流程使用 DeepAgents 0.6.x 作为编排层，同时保留 LangChain 模型适配和
 LangGraph checkpoint。通用文件、todo、task 操作使用 DeepAgents 内置工具，
