@@ -1,5 +1,7 @@
 # BIA-Brief Report Skill
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 本目录封装的是 `bia-brief-report` Agent Skill。它教 agent 如何把一个生物信息学项目
 ——一个装着分析图、脚本和元数据的文件夹——变成一份成稿报告，输出 Markdown、PDF
 和 LaTeX 三种格式。
@@ -11,8 +13,6 @@ Skill 只包含工作流说明。报告引擎是 `bia-brief` Python 包，需要
 - **让 agent 去做。** 把本目录装进 agent 的 skills 目录，然后说
   `$bia-brief-report 生成我这个项目的报告`。agent 会读 `SKILL.md` 并替你调用命令行。
 - **自己敲命令。** 装好运行时后直接调 `bia-brief-project`。这里的一切都不依赖 agent。
-
-English version: [README.md](README.md)
 
 ## 开始前需要准备什么
 

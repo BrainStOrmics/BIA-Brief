@@ -1,5 +1,7 @@
 # BIA-Brief Report Skill
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 This directory packages the `bia-brief-report` Agent Skill. It teaches an
 agent how to turn a bioinformatics project — a folder of analysis figures,
 scripts, and metadata — into a finished report in Markdown, PDF, and LaTeX.
@@ -14,8 +16,6 @@ There are two ways to use it:
   reads `SKILL.md` and drives the CLI for you.
 - **Run the commands yourself.** Install the runtime and call
   `bia-brief-project` directly. Nothing here requires an agent.
-
-[中文版](README.zh-CN.md)
 
 ## What you need before you start
 
